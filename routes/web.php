@@ -1,0 +1,421 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\HomeController;
+
+// Admin Controllers
+use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\EmployeeQrController;
+use App\Http\Controllers\Admin\EmployeeAttendanceController;
+use App\Http\Controllers\Admin\EmployeeTripController;
+use App\Http\Controllers\Admin\BusController;
+use App\Http\Controllers\Admin\DriverController;
+use App\Http\Controllers\Admin\DriverTripController;
+use App\Http\Controllers\Admin\DriverAssignmentController;
+use App\Http\Controllers\Admin\DriverAuthLogController;
+use App\Http\Controllers\Admin\LiveMapPageController;
+use App\Http\Controllers\Admin\LiveTrackingController;
+use App\Http\Controllers\Admin\RouteController;
+use App\Http\Controllers\Admin\TripController;
+use App\Http\Controllers\Admin\AssignmentController;
+use App\Http\Controllers\Admin\UserPermissionController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ActiveBusPageController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\RolePermissionController;
+
+// Chat (admin + company reuse)
+use App\Http\Controllers\Admin\ChatController;
+use App\Http\Controllers\Admin\BusChatController;
+use App\Http\Controllers\Admin\GroupChatController;
+
+// Company Controllers
+use App\Http\Controllers\Company\DashboardController as CompanyDashboardController;
+use App\Http\Controllers\Company\EmployeeController as CompanyEmployeeController;
+use App\Http\Controllers\Company\TripController as CompanyTripController;
+use App\Http\Controllers\Company\ReportController as CompanyReportController;
+use App\Http\Controllers\Company\NotificationController as CompanyNotificationController;
+use App\Http\Controllers\Company\ProfileController as CompanyProfileController;
+use App\Http\Controllers\Company\EmployeeQrController as CompanyEmployeeQrController;
+use App\Http\Controllers\Company\EmployeeScheduleController;
+use App\Http\Controllers\Company\AssignmentController as CompanyAssignmentController;
+use App\Events\ChatMessageSent;
+
+Auth::routes();
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES
+|--------------------------------------------------------------------------
+*/
+Route::get('/', [HomeController::class, 'dashboard'])->name('home');
+
+
+Route::get('/debug/trips/{trip}/gps', function(\App\Models\Trip $trip) {
+    return $trip->locations()
+        ->orderBy('tracked_at')
+        ->get([
+            'latitude as lat',
+            'longitude as lng',
+            'speed',
+            'tracked_at'
+        ])
+        ->map(function ($item) {
+            $item->tracked_at = \Carbon\Carbon::parse($item->tracked_at)->format('h:i A');
+            return $item;
+        });
+});
+
+
+Route::get('/debug-chat-sound/{threadId}', function ($threadId) {
+    $user = auth()->user();
+
+    event(new ChatMessageSent(
+        threadId: (int) $threadId,
+        payload: [
+            'message_id' => 999999,
+            'sender_id'  => 12345, // some OTHER ID, not $user->id
+            'thread_id'  => (int) $threadId,
+            'body'       => 'Test sound',
+            'created_at' => now()->toDateTimeString(),
+        ]
+    ));
+
+    return 'event fired';
+})->middleware('auth');
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES (SUPER ADMIN CORE MODULES)
+|--------------------------------------------------------------------------
+| Restricted to super_admin only.
+*/
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['auth', 'role:super_admin'])
+    ->group(function () {
+
+        // Dashboard
+        Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+        // Schedules (reuse Company\EmployeeScheduleController)
+        Route::resource('schedules', EmployeeScheduleController::class)
+            ->only(['index', 'create', 'store']);
+
+        // Active buses page
+        Route::get('buses/active', [ActiveBusPageController::class, 'index'])
+            ->name('buses.active');
+
+        // Users module
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [UserController::class, 'index'])->name('index')->middleware('can:view_users');
+            Route::get('/create', [UserController::class, 'create'])->name('create')->middleware('can:manage_users');
+            Route::post('/', [UserController::class, 'store'])->name('store')->middleware('can:manage_users');
+            Route::get('{user}/edit', [UserController::class, 'edit'])->name('edit')->middleware('can:manage_users');
+            Route::put('{user}', [UserController::class, 'update'])->name('update')->middleware('can:manage_users');
+            Route::delete('{user}', [UserController::class, 'destroy'])->name('destroy')->middleware('can:manage_users');
+        });
+
+        // User permission management
+        Route::middleware('can:manage_roles')->group(function () {
+            Route::get('users/permissions', [UserPermissionController::class, 'index'])
+                ->name('users.permissions.index');
+
+            Route::get('users/{user}/permissions', [UserPermissionController::class, 'edit'])
+                ->name('users.permissions.edit');
+
+            Route::post('users/{user}/permissions', [UserPermissionController::class, 'update'])
+                ->name('users.permissions.update');
+        });
+
+        // Companies
+        Route::resource('companies', CompanyController::class);
+
+        // Employees
+        Route::resource('employees', EmployeeController::class)
+            ->only(['index', 'show', 'create', 'store', 'edit', 'update']);
+
+        Route::get('/employees/{employee}/qr', [EmployeeQrController::class, 'show'])->name('employees.qr');
+        Route::post('/employees/{employee}/qr', [EmployeeQrController::class, 'generate'])->name('employees.qr.generate');
+
+        Route::get('/employees/{employee}/attendance', [EmployeeAttendanceController::class, 'index'])
+            ->name('employees.attendance');
+
+        Route::get('/employees/{employee}/trips', [EmployeeTripController::class, 'index'])
+            ->name('employees.trips');
+
+        // Buses
+        Route::resource('buses', BusController::class)->only(['index', 'show', 'store', 'update']);
+        Route::get('buses/{bus}/json', [BusController::class, 'json'])->name('buses.json');
+
+        // Routes
+        Route::resource('routes', RouteController::class);
+
+        // Drivers
+        Route::prefix('drivers')->name('drivers.')->group(function () {
+            Route::get('/', [DriverController::class, 'index'])->name('index');
+            Route::post('/', [DriverController::class, 'store'])->name('store');
+            Route::get('{driver}', [DriverController::class, 'show'])->name('show');
+            Route::put('{driver}', [DriverController::class, 'update'])->name('update');
+            Route::get('{driver}/assignment', [DriverAssignmentController::class, 'show'])->name('assignment');
+            Route::post('{driver}/assignment', [DriverAssignmentController::class, 'store'])->name('assignment.store');
+            Route::get('{driver}/auth-logs', [DriverAuthLogController::class, 'index'])->name('auth-logs');
+            Route::get('{driver}/trips', [DriverTripController::class, 'index'])->name('trips');
+        });
+
+        // Assignments
+        Route::prefix('assignments')->name('assignments.')->group(function () {
+
+            Route::get('/', [AssignmentController::class, 'index'])->name('index');
+
+            Route::get('/create', [AssignmentController::class, 'create'])->name('create');
+            Route::post('/', [AssignmentController::class, 'store'])->name('store');
+
+            Route::get('/{assignment}', [AssignmentController::class, 'show'])->name('show');
+
+            Route::get('/{assignment}/edit', [AssignmentController::class, 'edit'])->name('edit');
+            Route::put('/{assignment}', [AssignmentController::class, 'update'])->name('update');
+
+            Route::get('/{assignment}/timeline', [AssignmentController::class, 'timeline'])->name('timeline');
+        });
+
+        // Trips (admin view)
+        Route::prefix('trips')->name('trips.')->group(function () {
+            Route::get('active', [TripController::class, 'active'])->name('active');
+            Route::get('/', [TripController::class, 'today'])->name('today');
+            Route::get('{trip}', [TripController::class, 'show'])->name('show');
+            Route::get('{trip}/gps-playback', [TripController::class, 'gpsPlayback'])->name('gps-playback');
+        });
+
+        // Live map page (ADMIN: super_admin)
+        Route::get('/live-map', [LiveMapPageController::class, 'index'])->name('live-map');
+
+        // Live tracking JSON endpoints (ADMIN: super_admin)
+        Route::prefix('api')->name('api.')->group(function () {
+            Route::get('/live-buses', [LiveTrackingController::class, 'index'])->name('live-buses');
+        });
+    });
+
+/*
+|--------------------------------------------------------------------------
+| COMPANY ROUTES (COMPANY ADMIN MODULES)
+|--------------------------------------------------------------------------
+| All company panel routes now live here (no more in company.php).
+*/
+Route::prefix('company')
+    ->name('company.')
+    ->middleware(['auth', 'role:company_admin|super_admin'])
+    ->group(function () {
+
+        // Dashboard (separate company dashboard controller)
+        Route::get('/dashboard', [CompanyDashboardController::class, 'index'])
+            ->name('dashboard');
+
+        // Employees (company view)
+        Route::resource('employees', CompanyEmployeeController::class)
+            ->only(['index', 'show', 'store', 'update', 'create', 'edit']);
+
+        Route::get('employees/{employee}/qr', [CompanyEmployeeQrController::class, 'show'])
+            ->name('employees.qr');
+
+        Route::post('employees/{employee}/qr', [CompanyEmployeeQrController::class, 'generate'])
+            ->name('employees.qr.generate');
+
+        Route::get('employees/{employee}/attendance', [EmployeeAttendanceController::class, 'index'])
+            ->name('employees.attendance');
+
+
+
+
+        Route::prefix('trips')->name('trips.')->group(function () {
+            Route::get('active', [CompanyTripController::class, 'active'])->name('active');
+            Route::get('/', [CompanyTripController::class, 'today'])->name('today');
+            Route::get('{trip}', [CompanyTripController::class, 'show'])->name('show');
+            Route::get('{trip}/gps-playback', [CompanyTripController::class, 'gpsPlayback'])->name('gps-playback');
+        });
+
+
+
+
+        // Reports
+        Route::get('/reports', [CompanyReportController::class, 'index'])
+            ->name('reports.index');
+
+        Route::get('/reports/export/{type}', [CompanyReportController::class, 'export'])
+            ->name('reports.export');
+
+        // Notifications
+        Route::get('/notifications', [CompanyNotificationController::class, 'index'])
+            ->name('notifications.index');
+
+        Route::post('/notifications/{notification}/read', [CompanyNotificationController::class, 'markAsRead'])
+            ->name('notifications.read');
+
+        // Profile
+        Route::get('/profile', [CompanyProfileController::class, 'show'])
+            ->name('profile.show');
+
+        Route::post('/profile', [CompanyProfileController::class, 'update'])
+            ->name('profile.update');
+
+        // Schedules (company)
+        Route::resource('schedules', EmployeeScheduleController::class)
+            ->only(['index', 'create', 'store']);
+
+        // ------------------------------
+        // Company Chat (Web UI + JSON)
+        // ------------------------------
+
+        // UI list page
+        Route::get('/chats', [ChatController::class, 'index'])
+            ->name('chat.index');
+
+        // JSON endpoints (MUST come BEFORE /chat/{thread})
+        Route::prefix('chat')->name('chat.')->group(function () {
+
+            Route::get('/threads', [ChatController::class, 'threads'])
+                ->name('threads');
+
+            Route::get('/threads/{thread}/meta', [ChatController::class, 'meta'])
+                ->whereNumber('thread')
+                ->name('meta');
+
+            Route::get('/threads/{thread}/messages', [ChatController::class, 'messages'])
+                ->whereNumber('thread')
+                ->name('messages');
+
+            Route::post('/threads/{thread}/messages', [ChatController::class, 'send'])
+                ->whereNumber('thread')
+                ->name('send');
+        });
+
+        // Thread page (AFTER /chat/threads)
+        Route::get('/chat/{thread}', [ChatController::class, 'show'])
+            ->whereNumber('thread')
+            ->name('chat.show');
+
+        // Live map page (COMPANY)
+        Route::get('/live-map', [LiveMapPageController::class, 'index'])
+            ->name('live-map');
+
+        // OPTIONAL: old URL for backward compatibility
+        Route::get('/live-tracking', [LiveMapPageController::class, 'index'])
+            ->name('live-tracking');
+
+        // Live tracking JSON endpoints (COMPANY)
+        Route::prefix('api')->name('api.')->group(function () {
+            Route::get('/live-buses', [LiveTrackingController::class, 'index'])
+                ->name('live-buses'); // route('company.api.live-buses')
+        });
+        Route::get('assignments', [CompanyAssignmentController::class, 'index'])
+            ->name('assignments.index');
+
+        Route::get('assignments/{assignment}', [CompanyAssignmentController::class, 'show'])
+            ->name('assignments.show');
+
+        Route::get('assignments/{assignment}/timeline', [CompanyAssignmentController::class, 'timeline'])
+            ->name('assignments.timeline');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES (CHAT SYSTEM - WEB UI)
+|--------------------------------------------------------------------------
+| Accessible to super_admin/admin/company_admin (add employee/driver if needed).
+*/
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['auth', 'role:super_admin|admin|company_admin'])
+    ->group(function () {
+
+        // Inbox / list page
+        Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+
+        // Chat JSON
+        Route::prefix('chat')->name('chat.')->group(function () {
+
+            Route::get('/threads', [ChatController::class, 'threads'])
+                ->name('threads');
+
+            Route::get('/threads/{thread}/meta', [ChatController::class, 'meta'])
+                ->whereNumber('thread')
+                ->name('meta');
+
+            Route::get('/threads/{thread}/messages', [ChatController::class, 'messages'])
+                ->whereNumber('thread')
+                ->name('messages');
+
+            Route::post('/threads/{thread}/messages', [ChatController::class, 'send'])
+                ->whereNumber('thread')
+                ->name('send');
+        });
+
+        // Thread page
+        Route::get('/chat/{thread}', [ChatController::class, 'show'])
+            ->whereNumber('thread')
+            ->name('chat.show');
+
+        // Optional: Bus chat
+        Route::get('/bus-chat', [BusChatController::class, 'index'])->name('bus-chat.index');
+
+        Route::prefix('bus-chat')->name('bus-chat.')->group(function () {
+
+            Route::get('/threads', [BusChatController::class, 'threads'])
+                ->name('threads');
+
+            Route::get('/threads/{thread}/messages', [BusChatController::class, 'messages'])
+                ->whereNumber('thread')
+                ->name('messages');
+
+            Route::post('/threads/{thread}/messages', [BusChatController::class, 'sendMessage'])
+                ->whereNumber('thread')
+                ->name('messages.send');
+        });
+    });
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES (GROUP CHAT MANAGEMENT - SUPER ADMIN)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['auth', 'role:super_admin'])
+    ->group(function () {
+
+        Route::get('/group-chats', [GroupChatController::class, 'index'])
+            ->name('group-chats.index');
+
+        Route::prefix('group-chats')->name('group-chats.')->group(function () {
+            Route::get('/users', [GroupChatController::class, 'users'])->name('users');
+            Route::get('/threads', [GroupChatController::class, 'threads'])->name('threads');
+            Route::post('/threads', [GroupChatController::class, 'store'])->name('store');
+
+            Route::get('/threads/{thread}', [GroupChatController::class, 'show'])->name('show');
+            Route::post('/threads/{thread}/participants', [GroupChatController::class, 'addParticipants'])->name('participants.add');
+            Route::delete('/threads/{thread}/participants/{user}', [GroupChatController::class, 'removeParticipant'])->name('participants.remove');
+        });
+    });
+
+/*
+|--------------------------------------------------------------------------
+| ROLES & PERMISSIONS
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'can:manage_roles'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}/permissions', [RolePermissionController::class, 'edit'])->name('roles.permissions.edit');
+        Route::post('roles/{role}/permissions', [RolePermissionController::class, 'update'])->name('roles.permissions.update');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| CATCH-ALL (MUST BE LAST)
+|--------------------------------------------------------------------------
+*/
+Route::get('{any}', [HomeController::class, 'index'])
+    ->where('any', '^(?!admin($|\/)|admin\/api|company|broadcasting|build|assets|storage).*$');

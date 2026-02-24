@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Http\Controllers\Api\Bus;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\Bus\EmployeeTripStatusResource;
+use App\Models\Assignment;
+use App\Models\Employee;
+use Illuminate\Http\Request;
+
+class BusOnboardEmployeeController extends Controller
+{
+    public function index(Request $request)
+    {
+        $bus  = $request->user();
+        $trip = $bus->activeTrip; // may be null
+
+        $today = today();
+
+        // Always resolve active assignment today (non-expired) for this bus
+        $assignment = Assignment::query()
+            ->where('bus_id', $bus->id)
+            ->whereDate('effective_from', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('effective_to')
+                  ->orWhereDate('effective_to', '>=', $today);
+            })
+            ->latest('effective_from')
+            ->first();
+
+        if (!$assignment || !$assignment->company_id) {
+            // No valid assignment -> we cannot know which employees to show
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'No active (non-expired) assignment found for this bus today.',
+                'debug'   => [
+                    'bus_id' => $bus->id,
+                    'trip_id' => $trip?->id,
+                ],
+            ], 422);
+        }
+
+        $companyId = (int) $assignment->company_id;
+
+        // 1) Get employees for the assigned company
+        $employees = Employee::query()
+            ->where('company_id', $companyId)
+            ->with(['user', 'company'])
+            ->get();
+
+        // 2) If there is an active trip, attach ONLY that trip's scans
+        if ($trip) {
+            $employees->load([
+                'checkins' => function ($q) use ($trip) {
+                    $q->where('trip_id', $trip->id)
+                      ->orderBy('created_at');
+                }
+            ]);
+        }
+
+        // 3) Build rows
+        $rows = $employees->map(function ($employee) use ($trip) {
+            $checkin = null;
+            $checkout = null;
+
+            if ($trip) {
+                $checkin  = $employee->checkins->where('scan_type', 'checkin')->last();
+                $checkout = $employee->checkins->where('scan_type', 'checkout')->last();
+            }
+
+            $status = 'not_scanned';
+            if ($trip) {
+                if ($checkout) $status = 'dropped';
+                elseif ($checkin) $status = 'onboard';
+            }
+
+            return [
+                'employee' => $employee,
+                'checkin'  => $checkin,
+                'checkout' => $checkout,
+                'status'   => $status,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'trip' => [
+                    'has_active_trip' => (bool) $trip,
+                    'trip_id'         => $trip?->id,
+                    'status'          => $trip?->status,
+                ],
+                'assignment' => [
+                    'assignment_id' => $assignment->id,
+                    'company_id'    => $companyId,
+                ],
+                'count'     => $rows->count(),
+                'employees' => EmployeeTripStatusResource::collection($rows),
+            ],
+        ]);
+    }
+}

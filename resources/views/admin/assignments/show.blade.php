@@ -1,0 +1,192 @@
+@extends('layouts.master')
+@section('title')
+    Starter page
+@endsection
+@section('page-title')
+    Starter page
+@endsection
+@section('body')
+    <body data-sidebar="colored">
+@endsection
+@section('content')
+<div class="container-fluid">
+
+    {{-- EXECUTIVE SUMMARY --}}
+    <div class="card mb-4">
+        <div class="card-body row align-items-center">
+            <div class="col-md-8">
+                <h4 class="mb-1 fw-semibold">
+                    {{ $assignment->driver->user->full_name }}
+                </h4>
+                <div class="text-muted">
+                    {{ $assignment->company->name }} ·
+                    Assignment ID: <strong>#{{ $assignment->id }}</strong>
+                </div>
+            </div>
+
+            <div class="col-md-4 text-end">
+                <span class="badge fs-6 bg-{{ $assignment->status === 'active' ? 'success' : 'secondary' }}">
+                    {{ strtoupper($assignment->status) }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+
+        {{-- ASSIGNMENT OVERVIEW --}}
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Assignment Overview</h5>
+
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <th width="160">Driver</th>
+                            <td>{{ $assignment->driver->user->full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bus Plate Number</th>
+                            <td>{{ $assignment->bus->plate_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Assigned Route</th>
+                            <td>{{ $assignment->route->name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Company</th>
+                            <td>{{ $assignment->company->name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                <span class="badge bg-{{ $assignment->status === 'active' ? 'success' : 'secondary' }}">
+                                    {{ ucfirst($assignment->status) }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- DRIVER & BUS DETAILS --}}
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Driver & Fleet Information</h5>
+
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <th width="160">Driver Contact</th>
+                            <td>{{ $assignment->driver->user->contact_number ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Driver License No.</th>
+                            <td>{{ $assignment->driver->license_number ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bus Model</th>
+                            <td>{{ $assignment->bus->model ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bus Capacity</th>
+                            <td>{{ $assignment->bus->capacity ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bus Status</th>
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ ucfirst($assignment->bus->status ?? 'operational') }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- VALIDITY & LIFECYCLE --}}
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Assignment Validity</h5>
+
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <th width="160">Effective From</th>
+                            <td>{{ $assignment->effective_from->format('M d, Y') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Effective To</th>
+                            <td>
+                                {{ $assignment->effective_to
+                                    ? $assignment->effective_to->format('M d, Y')
+                                    : 'Ongoing' }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Duration</th>
+                            <td>
+                                {{ $assignment->effective_to
+                                    ? $assignment->effective_from->diffInDays($assignment->effective_to).' days'
+                                    : 'Indefinite' }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- SYSTEM METADATA (HM / ADMIN) --}}
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">System Metadata</h5>
+
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <th width="160">Created At</th>
+                            <td>{{ $assignment->created_at->format('M d, Y h:i A') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>{{ $assignment->updated_at->format('M d, Y h:i A') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Assigned By</th>
+                            <td>{{ $assignment->createdBy->full_name ?? 'System' }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- ACTIONS --}}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex flex-wrap gap-2">
+
+                    <a href="{{ route('admin.assignments.timeline', $assignment->id) }}"
+                       class="btn btn-outline-primary">
+                        <i class="mdi mdi-timeline"></i> View Assignment Timeline
+                    </a>
+
+
+                    <a href="{{ route('admin.assignments.index') }}"
+                       class="btn btn-outline-secondary ms-auto">
+                        Back to Assignments
+                    </a>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@endsection
+@section('scripts')
+    <!-- App js -->
+    <script src="{{ URL::asset('build/js/app.js') }}"></script>
+@endsection

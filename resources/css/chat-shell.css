@@ -1,0 +1,71 @@
+/* Fixed chat layout: prevents outer scrolling in the chat area */
+.chat-shell {
+  height: calc(100vh - 170px); /* adjust if needed */
+  overflow: hidden;
+}
+
+/* Left sidebar should be full height; only list scrolls */
+.chat-shell .chat-leftsidebar {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Left top profile/card should not scroll */
+.chat-shell .chat-left-top {
+  flex: 0 0 auto;
+}
+
+/* Thread list scroll area */
+.chat-shell .chat-thread-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+.user-img { position: relative; display: inline-block; }
+
+.user-status{
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.user-img.presence-online .user-status  { background: #34c38f; }
+.user-img.presence-away .user-status    { background: #f1b44c; }
+.user-img.presence-offline .user-status { background: #adb5bd; }
+
+
+/* Right chat column should be full height; only messages scroll */
+.chat-shell .user-chat {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header (top) fixed */
+.chat-shell .chat-header {
+  flex: 0 0 auto;
+}
+
+/* Messages area scroll only */
+.chat-shell .chat-conversation {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-shell .chat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+/* Composer fixed at bottom */
+.chat-shell .chat-composer {
+  flex: 0 0 auto;
+}
