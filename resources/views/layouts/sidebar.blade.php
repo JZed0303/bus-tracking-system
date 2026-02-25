@@ -336,9 +336,9 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                         </ul>
                     </li>
                 @endif
-                {{-- ================= ADMINISTRATION ================= --}}
+                {{-- ================= ADMINISTRATIONS ================= --}}
 @can('manage_roles')
-    <li class="menu-title">Administration</li>
+    <li class="menu-title">Administrations</li>
 <li>
     <a href="{{ route('admin.users.permissions.index') }}">
         <i class="ri-user-fill"></i>
@@ -351,6 +351,14 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
         <a href="{{ route('admin.roles.index') }}">
             <i class="ri-shield-user-fill"></i>
             <span>Roles & Permissions</span>
+        </a>
+    </li>
+
+    @php($isAuditTrailRoute = request()->routeIs('admin.audit-trail.*'))
+    <li class="{{ $isAuditTrailRoute ? 'mm-active' : '' }}">
+        <a href="{{ route('admin.audit-trail.index') }}" class="{{ $isAuditTrailRoute ? 'active' : '' }}">
+            <i class="ri-file-list-3-line"></i>
+            <span>Audit Trail</span>
         </a>
     </li>
 @endcan

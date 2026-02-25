@@ -7,15 +7,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 use App\Models\UserDeniedPermission;
 use Illuminate\Support\Facades\Gate;
 use App\Models\ChatThread;
 use App\Models\ChatMessage;
 use App\Models\ChatParticipant;
 
-class User extends Authenticatable
+class User extends Authenticatable implements Auditable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, AuditableTrait;
 
     /* ================= BASIC CONFIG ================= */
 
@@ -28,6 +30,7 @@ class User extends Authenticatable
      'role',
     'password',
     'status',
+    'theme_mode',
     'last_login_at',
     'company_id', // ✅ ADD THIS
 ];
@@ -46,6 +49,11 @@ protected $appends = [
   'presence',      // ✅ add: online/offline/away
 ];
     protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $auditExclude = [
         'password',
         'remember_token',
     ];

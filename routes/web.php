@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ActiveBusPageController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\AuditTrailController;
 
 // Chat (admin + company reuse)
 use App\Http\Controllers\Admin\ChatController;
@@ -55,6 +56,7 @@ Route::get('/', [HomeController::class, 'dashboard'])->name('home');
 
 Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
 });
 
 
@@ -132,6 +134,9 @@ Route::prefix('admin')
 
             Route::post('users/{user}/permissions', [UserPermissionController::class, 'update'])
                 ->name('users.permissions.update');
+
+            Route::get('audit-trail', [AuditTrailController::class, 'index'])
+                ->name('audit-trail.index');
         });
 
         // Companies

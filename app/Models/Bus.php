@@ -6,6 +6,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
 use App\Models\Trip;
 use App\Models\Assignment;
@@ -14,9 +16,9 @@ use App\Models\ChatParticipant;
 use App\Models\ChatMessage;
 use App\Models\ChatThread;
 
-class Bus extends Authenticatable
+class Bus extends Authenticatable implements Auditable
 {
-    use HasApiTokens, HasFactory;
+    use HasApiTokens, HasFactory, AuditableTrait;
 
     protected $fillable = [
         'plate_number',
@@ -29,6 +31,10 @@ class Bus extends Authenticatable
     ];
 
     protected $hidden = [
+        'bus_code',
+    ];
+
+    protected $auditExclude = [
         'bus_code',
     ];
 

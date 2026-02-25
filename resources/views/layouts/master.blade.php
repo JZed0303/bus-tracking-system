@@ -9,9 +9,30 @@
     <meta content="Themesdesign" name="author" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    @php
+        $resolvedThemeMode = auth()->check() ? (auth()->user()->theme_mode ?: 'light') : 'light';
+        $resolvedThemeMode = $resolvedThemeMode === 'dark' ? 'dark' : 'light';
+    @endphp
+
+    <script>
+        (function () {
+            var themeMode = @json($resolvedThemeMode);
+            document.documentElement.setAttribute('data-bs-theme', themeMode);
+
+            try {
+                if (window.sessionStorage) {
+                    sessionStorage.setItem('is_visited', themeMode === 'dark' ? 'dark-mode-switch' : 'light-mode-switch');
+                }
+            } catch (e) {
+                // Intentionally ignored; theme still applies via server-rendered attribute.
+            }
+        })();
+    </script>
+
     <script>
         window.companyId = @json(auth()->user()?->company_id);
         window.userRole  = @json(auth()->user()?->role);
+        window.themeMode = @json($resolvedThemeMode);
     </script>
 
     <!-- App favicon -->
@@ -41,6 +62,12 @@
 
 {{-- In Tocly templates, child views usually define the <body> tag --}}
 @yield('body')
+
+<script>
+    if (document.body && window.themeMode) {
+        document.body.setAttribute('data-bs-theme', window.themeMode);
+    }
+</script>
 
 @if(auth()->check())
     <script>

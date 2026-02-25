@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AuditTrail;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 
@@ -85,6 +86,8 @@ class UserPermissionController extends Controller
 {
     $selected = $request->permissions ?? [];
     $allPermissions = Permission::pluck('name')->toArray();
+    $oldPermissions = $user->permissions()->pluck('name')->sort()->values()->all();
+    $oldDeniedPermissions = $user->deniedPermissions()->pluck('permission')->sort()->values()->all();
 
     // Allow selected
     $user->syncPermissions($selected);
@@ -97,6 +100,23 @@ class UserPermissionController extends Controller
             $user->denyPermission($permission);
         }
     }
+
+    $newPermissions = $user->permissions()->pluck('name')->sort()->values()->all();
+    $newDeniedPermissions = $user->deniedPermissions()->pluck('permission')->sort()->values()->all();
+
+    AuditTrail::log(
+        event: 'user_permissions_updated',
+        auditable: $user,
+        oldValues: [
+            'permissions' => $oldPermissions,
+            'denied_permissions' => $oldDeniedPermissions,
+        ],
+        newValues: [
+            'permissions' => $newPermissions,
+            'denied_permissions' => $newDeniedPermissions,
+        ],
+        tags: 'permissions'
+    );
 
     return back()->with('success', 'User permissions updated.');
 }

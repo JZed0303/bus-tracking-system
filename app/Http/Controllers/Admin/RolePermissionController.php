@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AuditTrail;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -46,8 +47,20 @@ $specialPermissions = Permission::whereIn('name', [
 
     public function update(Request $request, Role $role)
 {
+    $oldPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
+
     if ($role->name === 'super_admin') {
         $role->syncPermissions(Permission::all());
+
+        $newPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
+        AuditTrail::log(
+            event: 'role_permissions_updated',
+            auditable: $role,
+            oldValues: ['permissions' => $oldPermissions],
+            newValues: ['permissions' => $newPermissions],
+            tags: 'permissions'
+        );
+
         return back()->with('success', 'Super Admin always has full access.');
     }
 
@@ -55,6 +68,15 @@ $specialPermissions = Permission::whereIn('name', [
 
     // Sync only selected permissions
     $role->syncPermissions($permissions);
+    $newPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
+
+    AuditTrail::log(
+        event: 'role_permissions_updated',
+        auditable: $role,
+        oldValues: ['permissions' => $oldPermissions],
+        newValues: ['permissions' => $newPermissions],
+        tags: 'permissions'
+    );
 
     return back()->with('success', 'Role permissions updated successfully.');
 }
