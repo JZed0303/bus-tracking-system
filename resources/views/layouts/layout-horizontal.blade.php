@@ -43,9 +43,6 @@
     </div>
     <!-- END layout-wrapper -->
 
-    <!-- customizer -->
-    @include('layouts.right-sidebar')
-
     <!-- vendor-scripts -->
     @include('layouts.vendor-scripts')
 

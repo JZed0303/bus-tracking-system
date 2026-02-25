@@ -272,7 +272,7 @@
                     <a class="dropdown-item" href="pages-profile"><i
                             class="mdi mdi-wallet text-muted font-size-16 align-middle me-1"></i> <span
                             class="align-middle">Balance : <b>$5971.67</b></span></a>
-                    <a class="dropdown-item" href="#"><span
+                    <a class="dropdown-item" href="{{ route('settings.index') }}"><span
                             class="badge bg-primary mt-1 float-end">New</span><i
                             class="mdi mdi-cog-outline text-muted font-size-16 align-middle me-1"></i> <span
                             class="align-middle">Settings</span></a>
@@ -284,12 +284,6 @@
                         @csrf
                     </form>
                 </div>
-            </div>
-
-            <div class="dropdown d-inline-block">
-                <button type="button" class="btn header-item noti-icon right-bar-toggle waves-effect">
-                    <i class="ri-settings-2-line"></i>
-                </button>
             </div>
 
         </div>

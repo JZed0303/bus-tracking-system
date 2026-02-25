@@ -270,9 +270,13 @@ return [
                 'order' => 9,
             ],
             'chat' => [
-    'label' => 'Chat',
-    'order' => 10,
-],
+            'label' => 'Chat',
+            'order' => 10,
+             ],
+             'settings' => [
+                'label' => 'Settings',
+                'order' => 11,
+            ],
 
         ],
     ],

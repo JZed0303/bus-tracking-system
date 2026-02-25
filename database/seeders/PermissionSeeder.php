@@ -35,6 +35,7 @@ class PermissionSeeder extends Seeder
             'reports',
             'notifications',
             'schedules',
+            'settings',
         ];
 
         $crudActions = ['view', 'create', 'update', 'delete'];

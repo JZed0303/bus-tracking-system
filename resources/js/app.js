@@ -110,22 +110,6 @@ File: Main Js File
             }
         }
 
-        function initRightSidebar() {
-            // right side-bar toggle
-            $('.right-bar-toggle').on('click', function (e) {
-                $('body').toggleClass('right-bar-enabled');
-            });
-
-            $(document).on('click', 'body', function (e) {
-                if ($(e.target).closest('.right-bar-toggle, .right-bar').length > 0) {
-                    return;
-                }
-
-                $('body').removeClass('right-bar-enabled');
-                return;
-            });
-        }
-
         function initDropdownMenu() {
             if(document.getElementById("topnav-menu-content")){
                 var elements = document.getElementById("topnav-menu-content").getElementsByTagName("a");
@@ -208,7 +192,7 @@ File: Main Js File
                     sessionStorage.setItem("is_visited", "light-mode-switch");
                 }
             } else {
-                $(".right-bar input:checkbox").prop('checked', false);
+                $("#light-mode-switch, #dark-mode-switch, #rtl-mode-switch").prop('checked', false);
                 $("#" + alreadyVisited).prop('checked', true);
                 updateThemeSetting(alreadyVisited);
             }
@@ -260,7 +244,6 @@ File: Main Js File
             initMenuItem();
             initMenuItemScroll();
             initFullScreen();
-            initRightSidebar();
             initDropdownMenu();
             initComponents();
             initPreloader()
@@ -271,5 +254,4 @@ File: Main Js File
         init();
 
     })(jQuery)
-
 

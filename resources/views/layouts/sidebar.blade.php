@@ -359,6 +359,15 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                 {{-- ================= ACCOUNT ================= --}}
                 <li class="menu-title">Account</li>
 
+                @php($isSettingsRoute = request()->routeIs('settings.*'))
+
+                <li class="{{ $isSettingsRoute ? 'mm-active' : '' }}">
+                    <a href="{{ route('settings.index') }}" class="{{ $isSettingsRoute ? 'active' : '' }}">
+                        <i class="ri-settings-3-line"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+
                 <li>
                     <a href="#">
                         <i class="ri-user-fill"></i>

@@ -87,9 +87,6 @@
 </div>
 <!-- END layout-wrapper -->
 
-<!-- customizer -->
-@include('layouts.right-sidebar')
-
 <!-- vendor-scripts (bootstrap.bundle, waves, simplebar, etc.) -->
 @include('layouts.vendor-scripts')
 

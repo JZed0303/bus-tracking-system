@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SettingsController;
 
 // Admin Controllers
 use App\Http\Controllers\Admin\CompanyController;
@@ -51,6 +52,10 @@ Auth::routes();
 |--------------------------------------------------------------------------
 */
 Route::get('/', [HomeController::class, 'dashboard'])->name('home');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+});
 
 
 Route::get('/debug/trips/{trip}/gps', function(\App\Models\Trip $trip) {

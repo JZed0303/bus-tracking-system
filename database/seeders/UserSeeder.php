@@ -10,7 +10,7 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
+        $superadmin=User::create([
             'first_name' => 'Super',
             'middle_name' => null,
             'last_name' => 'Admin',
@@ -23,30 +23,9 @@ class UserSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        User::create([
-            'first_name' => 'Company',
-            'middle_name' => null,
-            'last_name' => 'Admin',
-            'address' => 'Company Office',
+           
+            $superadmin->assignRole('super_admin');
 
-            'email' => 'company@system.test',
-            'password' => Hash::make('password'),
-
-            'role' => 'company_admin',
-            'status' => 'active',
-        ]);
-
-        User::create([
-            'first_name' => 'Driver',
-            'middle_name' => null,
-            'last_name' => 'One',
-            'address' => 'Driver Terminal',
-
-            'email' => 'driver@system.test',
-            'password' => Hash::make('password'),
-
-            'role' => 'driver',
-            'status' => 'active',
-        ]);
+       
     }
 }
