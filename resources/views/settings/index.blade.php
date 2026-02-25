@@ -1,9 +1,9 @@
 @extends('layouts.master')
 @section('title')
-    Settings
+    Starter page
 @endsection
 @section('page-title')
-    Settings
+    Starter page
 @endsection
 @section('body')
     <body data-sidebar="colored">
@@ -76,25 +76,7 @@
     </div>
 </div>
 @endsection
-
 @section('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const radios = document.querySelectorAll('input[name="theme_mode"]');
-
-        radios.forEach(function (radio) {
-            radio.addEventListener('change', function (event) {
-                const mode = event.target.value === 'dark' ? 'dark' : 'light';
-                document.documentElement.setAttribute('data-bs-theme', mode);
-                document.body.setAttribute('data-bs-theme', mode);
-
-                try {
-                    sessionStorage.setItem('is_visited', mode === 'dark' ? 'dark-mode-switch' : 'light-mode-switch');
-                } catch (e) {
-                    // Ignore storage failures.
-                }
-            });
-        });
-    });
-</script>
+    <!-- App js -->
+    <script src="{{ URL::asset('build/js/app.js') }}"></script>
 @endsection
