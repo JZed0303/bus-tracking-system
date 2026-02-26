@@ -63,6 +63,7 @@
                         </div>
                     </div>
 
+                    
                     @error('theme_mode')
                         <div class="text-danger mt-2">{{ $message }}</div>
                     @enderror
