@@ -13,7 +13,7 @@ class AuditTrailController extends Controller
         $auditTrails = Audit::query()
             ->with('user')
             ->latest()
-            ->paginate(20);
+            ->get();
 
         return view('admin.audit-trail.index', compact('auditTrails'));
     }

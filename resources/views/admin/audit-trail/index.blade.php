@@ -2,6 +2,10 @@
 @section('title')
     Starter page
 @endsection
+@section('css')
+    <link href="{{ URL::asset('build/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css') }}" rel="stylesheet" />
+    <link href="{{ URL::asset('build/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css') }}" rel="stylesheet" />
+@endsection
 @section('page-title')
     Starter page
 @endsection
@@ -17,7 +21,7 @@
                 <p class="card-title-desc mb-4">Complete history of critical actions in the system.</p>
 
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle mb-0">
+                    <table id="audit-trail-table" class="table table-striped table-bordered align-middle mb-0 nowrap" style="width: 100%;">
                         <thead>
                             <tr>
                                 <th style="min-width: 180px;">User</th>
@@ -93,15 +97,11 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">No audit records found.</td>
+                                    <td colspan="6" class="text-center text-muted">No audit records found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
-                </div>
-
-                <div class="mt-3">
-                    {{ $auditTrails->links('pagination::bootstrap-5') }}
                 </div>
             </div>
         </div>
@@ -109,6 +109,27 @@
 </div>
 @endsection
 @section('scripts')
+    <script src="{{ URL::asset('build/libs/datatables.net/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ URL::asset('build/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+    <script src="{{ URL::asset('build/libs/datatables.net-responsive/js/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ URL::asset('build/libs/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js') }}"></script>
+
+    <script>
+        $(function () {
+            $('#audit-trail-table').DataTable({
+                responsive: true,
+                pageLength: 10,
+                stateSave: true,
+                order: [[5, 'desc']],
+                columnDefs: [
+                    { responsivePriority: 1, targets: 5 },
+                    { responsivePriority: 2, targets: 0 },
+                    { responsivePriority: 100, targets: [3, 4] }
+                ]
+            });
+        });
+    </script>
+
     <!-- App js -->
     <script src="{{ URL::asset('build/js/app.js') }}"></script>
 @endsection
