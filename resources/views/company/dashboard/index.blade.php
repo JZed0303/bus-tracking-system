@@ -5,6 +5,54 @@
 @section('page-title')
     Starter page
 @endsection
+@section('css')
+<style>
+    .kpi-highlight-card {
+        border: 0;
+        border-radius: 12px;
+        color: #fff;
+        background: linear-gradient(135deg, #b61f1f 0%, #de6b28 100%)!important;
+        box-shadow: 0 6px 16px rgba(182, 31, 31, 0.22);
+    }
+
+    .kpi-highlight-card .kpi-label {
+        font-size: .72rem;
+        font-weight: 600;
+        text-transform: none;
+        opacity: .95;
+        margin-bottom: .35rem;
+    }
+
+    .kpi-highlight-card .kpi-value {
+        font-size: 1.8rem;
+        line-height: 1;
+        font-weight: 700;
+        margin-bottom: .25rem;
+    }
+
+    .kpi-highlight-card .kpi-meta {
+        font-size: .72rem;
+        opacity: .9;
+        margin: 0;
+    }
+
+    .kpi-highlight-card .kpi-icon-wrap {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, .35);
+    }
+
+    .kpi-highlight-card .kpi-icon-wrap i {
+        font-size: 1.05rem;
+        color: #fff;
+    }
+</style>
+@endsection
 @section('body')
 <body data-sidebar="colored">
 @endsection
@@ -61,51 +109,40 @@
     {{-- ===================== COMPANY KPI OVERVIEW (startpage style) ===================== --}}
     <div class="row g-3 mb-4">
         @php
+            $activeEmployeesCount = max(0, (int) $totalEmployees - (int) $inactiveEmployees);
             $kpis = [
                 [
                     'label' => 'Active Employees',
-                    'value' => $totalEmployees,
+                    'value' => $activeEmployeesCount,
                     'meta'  => number_format($inactiveEmployees).' inactive',
                     'icon'  => 'mdi-account-group',
-                    'color' => 'primary'
                 ],
                 [
                     'label' => 'Employees Transported Today',
                     'value' => $employeesTransportedToday,
                     'meta'  => $transportCoveragePercent.'% workforce coverage',
                     'icon'  => 'mdi-account-check',
-                    'color' => 'success'
                 ],
                 [
                     'label' => 'Assigned Buses',
                     'value' => $assignedBusesCount,
-                    'meta'  => number_format($onlineBusesCount).' currently online',
-                    'icon'  => 'mdi-bus',
-                    'color' => 'info'
-                ],
-                [
-                    'label' => 'Active Routes',
-                    'value' => $activeRoutes,
                     'meta'  => 'Company network in service',
-                    'icon'  => 'mdi-map-marker-path',
-                    'color' => 'warning'
+                    'icon'  => 'mdi-bus',
                 ],
             ];
         @endphp
 
         @foreach($kpis as $kpi)
-            <div class="col-xl-3 col-md-6">
-                <div class="card h-100">
-                    <div class="card-body d-flex justify-content-between align-items-center">
+            <div class="col-xl-4 col-md-6">
+                <div class="card kpi-highlight-card h-100">
+                    <div class="card-body d-flex justify-content-between align-items-start">
                         <div>
-                            <small class="text-muted">{{ $kpi['label'] }}</small>
-                            <h3 class="mb-0">{{ number_format($kpi['value']) }}</h3>
-                            <small class="text-muted">{{ $kpi['meta'] }}</small>
+                            <p class="kpi-label">{{ $kpi['label'] }}</p>
+                            <h3 class="kpi-value">{{ number_format($kpi['value']) }}</h3>
+                            <p class="kpi-meta">{{ $kpi['meta'] }}</p>
                         </div>
-                        <div class="avatar-sm">
-                            <span class="avatar-title bg-{{ $kpi['color'] }} rounded-circle">
-                                <i class="mdi {{ $kpi['icon'] }} font-size-20"></i>
-                            </span>
+                        <div class="kpi-icon-wrap">
+                            <i class="mdi {{ $kpi['icon'] }}"></i>
                         </div>
                     </div>
                 </div>

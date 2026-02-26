@@ -14,15 +14,14 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::before(function ($user, $ability) {
-
-            // 🔴 Absolute deny
-            if ($user->isPermissionDenied($ability)) {
-                return false;
-            }
-
-            // 🟢 Super Admin override
+            // Super Admin must always have full access.
             if ($user->hasRole('super_admin')) {
                 return true;
+            }
+
+            // Explicit deny applies to non-super-admin users only.
+            if ($user->isPermissionDenied($ability)) {
+                return false;
             }
 
             // Delegate to Spatie Permission

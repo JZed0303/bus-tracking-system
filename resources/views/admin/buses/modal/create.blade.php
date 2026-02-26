@@ -3,7 +3,7 @@
         <div class="modal-content">
 
            <form method="POST"
-      action="{{ route('admin.buses.store') }}"
+      action="{{ request()->routeIs('company.*') ? route('company.buses.store') : route('admin.buses.store') }}"
       enctype="multipart/form-data"
       class="needs-validation"
       novalidate>

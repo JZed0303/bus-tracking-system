@@ -19,7 +19,11 @@ class RouteController extends Controller
 {
     $routes = TransportRoute::query()
         ->with(['company'])
-        ->withCount(['stops', 'activeTrips'])
+        ->withCount([
+            'stops',
+            'activeTrips',
+            'assignments as active_assignments_count' => fn ($q) => $q->active(),
+        ])
 
         ->when($request->company_id, fn ($q) =>
             $q->where('company_id', $request->company_id)
@@ -145,6 +149,15 @@ class RouteController extends Controller
      * ============================= */
     public function destroy(TransportRoute $route): RedirectResponse
     {
+        $hasActiveTrips = $route->activeTrips()->exists();
+        $hasActiveAssignments = $route->assignments()->active()->exists();
+
+        if ($hasActiveTrips || $hasActiveAssignments) {
+            return redirect()
+                ->route('admin.routes.index')
+                ->with('error', 'Cannot delete route with active trip(s) or assignment(s).');
+        }
+
         $route->delete();
 
         return redirect()

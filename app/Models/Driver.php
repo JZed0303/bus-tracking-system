@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+<<<<<<< HEAD
 use Illuminate\Support\Facades\Storage;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Auditable as AuditableTrait;
+=======
+>>>>>>> origin/IBTS-v1
 
 class Driver extends Model implements Auditable
 {
@@ -26,8 +29,8 @@ class Driver extends Model implements Auditable
     public function getPhotoUrlAttribute(): string
     {
         if (!empty($this->photo_path)) {
-            // Use the public disk (matches ->store('drivers', 'public') in your controller)
-            return Storage::disk('public')->url($this->photo_path);
+            // Build URL from current app host (avoids localhost/bus.local mismatch).
+            return asset('storage/' . ltrim($this->photo_path, '/'));
         }
 
         return asset('build/images/user-placeholder.png');

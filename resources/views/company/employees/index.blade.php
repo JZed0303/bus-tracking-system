@@ -170,12 +170,14 @@
                         </p>
                     </div>
                     <div class="col text-end">
-                        <button type="button"
-                                class="btn btn-primary"
-                                data-bs-toggle="modal"
-                                data-bs-target="#createEmployeeModal">
-                            <i class="mdi mdi-account-plus"></i> Add Employee
-                        </button>
+                        @can('create_employees')
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#createEmployeeModal">
+                                <i class="mdi mdi-account-plus"></i> Add Employee
+                            </button>
+                        @endcan
                     </div>
                 </div>
 
@@ -261,20 +263,22 @@
                                         Schedules
                                     </a>
 
-                                    {{-- Edit (modal) --}}
-                                    <button class="btn btn-warning btn-edit-employee"
-                                            type="button"
-                                            data-id="{{ $employee->id }}"
-                                            data-first-name="{{ $employee->user->first_name }}"
-                                            data-middle-name="{{ $employee->user->middle_name }}"
-                                            data-last-name="{{ $employee->user->last_name }}"
-                                            data-email="{{ $employee->user->email }}"
-                                            data-employee-code="{{ $employee->employee_code }}"
-                                            data-department="{{ $employee->department }}"
-                                            data-status="{{ $employee->status }}"
-                                            data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
-                                        Edit
-                                    </button>
+                                    @can('update_employees')
+                                        {{-- Edit (modal) --}}
+                                        <button class="btn btn-warning btn-edit-employee"
+                                                type="button"
+                                                data-id="{{ $employee->id }}"
+                                                data-first-name="{{ $employee->user->first_name }}"
+                                                data-middle-name="{{ $employee->user->middle_name }}"
+                                                data-last-name="{{ $employee->user->last_name }}"
+                                                data-email="{{ $employee->user->email }}"
+                                                data-employee-code="{{ $employee->employee_code }}"
+                                                data-department="{{ $employee->department }}"
+                                                data-status="{{ $employee->status }}"
+                                                data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
+                                            Edit
+                                        </button>
+                                    @endcan
 
                                     {{-- QR --}}
                                     <a href="{{ route('company.employees.qr', $employee->id) }}"
@@ -293,8 +297,12 @@
         </div>
 
         {{-- Company versions of modals --}}
-        @include('company.employees.modal.create')
-        @include('company.employees.modal.edit')
+        @can('create_employees')
+            @include('company.employees.modal.create')
+        @endcan
+        @can('update_employees')
+            @include('company.employees.modal.edit')
+        @endcan
 
     </div>
 @endsection

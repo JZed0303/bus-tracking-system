@@ -134,7 +134,7 @@ class AssignmentController extends Controller
 
     public function timeline(Assignment $assignment): View
     {
-        $assignment->load(['trips', 'driver.user', 'route']);
+        $assignment->load(['trips', 'driver.user', 'route', 'bus', 'company']);
 
         return view('admin.assignments.timeline', compact('assignment'));
     }

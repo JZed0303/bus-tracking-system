@@ -27,6 +27,24 @@ Users
 .badge {
     font-weight: 500;
 }
+
+.user-actions .btn {
+    border-radius: 0 !important;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.user-actions .btn:first-child {
+    border-top-left-radius: .25rem !important;
+    border-bottom-left-radius: .25rem !important;
+}
+.user-actions .btn:last-child {
+    border-top-right-radius: .25rem !important;
+    border-bottom-right-radius: .25rem !important;
+}
 </style>
 <div class="container-fluid">
 
@@ -176,11 +194,13 @@ Users
                 <!-- ACTIONS -->
                 <td class="text-center">
                     @can('manage_users')
-                        <div class="d-inline-flex gap-1">
+                        <div class="btn-group btn-group-sm user-actions">
 
                             <a href="{{ route('admin.users.edit', $user) }}"
-                               class="btn btn-sm btn-warning">
-                                Edit
+                               class="btn btn-warning"
+                               data-bs-toggle="tooltip"
+                               title="Edit User">
+                                <i class="mdi mdi-pencil-outline"></i>
                             </a>
 
                             <form method="POST"
@@ -189,8 +209,10 @@ Users
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit"
-                                        class="btn btn-sm btn-danger">
-                                    Disable
+                                        class="btn btn-danger"
+                                        data-bs-toggle="tooltip"
+                                        title="Disable User">
+                                    <i class="mdi mdi-account-off-outline"></i>
                                 </button>
                             </form>
 
@@ -214,7 +236,7 @@ Users
 @section('scripts')
 <script src="{{ URL::asset('build/libs/datatables.net/js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ URL::asset('build/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-<script src="{{ URL::asset('build/libs/datatables.net-responsive/js/dataTables.responsive.min.js') }}"></cript>
+<script src="{{ URL::asset('build/libs/datatables.net-responsive/js/dataTables.responsive.min.js') }}"></script>
 <script src="{{ URL::asset('build/libs/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js') }}"></script>
 <script src="{{ URL::asset('build/js/app.js') }}"></script>
 
@@ -226,6 +248,8 @@ $(function () {
         pageLength: 10,
         order: [[0, 'asc']]
     });
+
+    $('[data-bs-toggle="tooltip"]').tooltip();
 
 });
 </script>

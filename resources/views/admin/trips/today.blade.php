@@ -7,6 +7,11 @@ Today’s Trips
 @section('css')
 <link href="{{ URL::asset('build/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css') }}" rel="stylesheet" />
 <link href="{{ URL::asset('build/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css') }}" rel="stylesheet" />
+<style>
+    #trips-table_filter {
+        display: none;
+    }
+</style>
 @endsection
 
 @section('page-title')
@@ -39,6 +44,54 @@ Today’s Trips
     <!-- TRIPS TABLE -->
     <div class="card">
         <div class="card-body">
+            @php
+                $routeOptions = $trips
+                    ->map(fn ($trip) => optional($trip->assignment->route)->name)
+                    ->filter()
+                    ->unique()
+                    ->sort()
+                    ->values();
+            @endphp
+
+            <div class="row g-2 mb-3 align-items-center">
+                <div class="col-lg-5">
+                    <div class="btn-group" role="group" aria-label="Trip direction tabs">
+                        <button type="button" class="btn btn-outline-primary btn-direction active" data-direction="all">
+                            All
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-direction" data-direction="pickup">
+                            Pickup
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-direction" data-direction="dropoff">
+                            Drop-off
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <select id="route-filter" class="form-select form-select-sm">
+                                <option value="all">All Routes</option>
+                                @foreach($routeOptions as $routeName)
+                                    <option value="{{ $routeName }}">{{ $routeName }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="status-filter" class="form-select form-select-sm">
+                                <option value="all">All Status</option>
+                                <option value="ongoing">Ongoing</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <input id="trip-search" type="search" class="form-control form-control-sm"
+                                   placeholder="Search bus, driver, route...">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <table id="trips-table"
                    class="table table-bordered table-striped dt-responsive nowrap"
@@ -51,6 +104,7 @@ Today’s Trips
                     <th>Route</th>
                     <th>Direction</th>
                     <th>Started</th>
+                    <th>Ended</th>
                     <th>Status</th>
                     <th width="160">Actions</th>
                 </tr>
@@ -65,8 +119,12 @@ Today’s Trips
                             'cancelled' => 'danger',
                             default     => 'secondary',
                         };
+                        $routeName = optional($trip->assignment->route)->name ?? '—';
+                        $directionKey = $trip->direction ?? 'unknown';
                     @endphp
-                    <tr>
+                    <tr data-direction="{{ $directionKey }}"
+                        data-route="{{ strtolower($routeName) }}"
+                        data-status="{{ strtolower($trip->status) }}">
                         <td class="fw-semibold">
                             {{ optional($trip->assignment->bus)->plate_number ?? '—' }}
                         </td>
@@ -86,7 +144,11 @@ Today’s Trips
                         </td>
 
                         <td>
-                            {{ $trip->actual_start_time?->format('H:i') ?? '—' }}
+                            {{ $trip->actual_start_time?->timezone('Asia/Manila')->format('h:iA') ?? '—' }}
+                        </td>
+
+                        <td>
+                            {{ $trip->actual_end_time?->timezone('Asia/Manila')->format('h:iA') ?? '—' }}
                         </td>
 
                         <td>
@@ -97,7 +159,7 @@ Today’s Trips
 
                         <td>
                             @if($trip->status === 'ongoing')
-                                <a href="{{ route('admin.trips.show', $trip) }}?tab=checkins"
+                                <a href="{{ route('admin.live-map', ['trip' => $trip->id]) }}"
                                    class="btn btn-sm btn-success">
                                     <i class="mdi mdi-eye-outline"></i> Live
                                 </a>
@@ -129,10 +191,48 @@ Today’s Trips
 
 <script>
 $(function () {
-    $('#trips-table').DataTable({
+    const table = $('#trips-table').DataTable({
         responsive: true,
         pageLength: 10,
-        order: [[4, 'asc']]
+        order: [[4, 'asc']],
+        dom: 'rtip'
+    });
+
+    let directionFilter = 'all';
+
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        if (settings.nTable.id !== 'trips-table') {
+            return true;
+        }
+
+        const rowNode = table.row(dataIndex).node();
+        const rowDirection = (rowNode.getAttribute('data-direction') || 'all').toLowerCase();
+        const rowRoute = (rowNode.getAttribute('data-route') || '').toLowerCase();
+        const rowStatus = (rowNode.getAttribute('data-status') || '').toLowerCase();
+
+        const selectedRoute = ($('#route-filter').val() || 'all').toLowerCase();
+        const selectedStatus = ($('#status-filter').val() || 'all').toLowerCase();
+
+        const directionMatch = directionFilter === 'all' || rowDirection === directionFilter;
+        const routeMatch = selectedRoute === 'all' || rowRoute === selectedRoute.toLowerCase();
+        const statusMatch = selectedStatus === 'all' || rowStatus === selectedStatus;
+
+        return directionMatch && routeMatch && statusMatch;
+    });
+
+    $('.btn-direction').on('click', function () {
+        $('.btn-direction').removeClass('active');
+        $(this).addClass('active');
+        directionFilter = ($(this).data('direction') || 'all').toLowerCase();
+        table.draw();
+    });
+
+    $('#route-filter, #status-filter').on('change', function () {
+        table.draw();
+    });
+
+    $('#trip-search').on('keyup search', function () {
+        table.search(this.value).draw();
     });
 });
 </script>

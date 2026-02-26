@@ -3,16 +3,60 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+<<<<<<< HEAD
 use App\Support\AuditTrail;
+=======
+use App\Models\Module;
+>>>>>>> origin/IBTS-v1
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class RolePermissionController extends Controller
 {
-   public function edit(Role $role)
+public function edit(Role $role)
 {
-    $uiModules = config('permission.ui.modules');
+    if ($role->name === 'super_admin') {
+        $role->syncPermissions(Permission::pluck('name')->toArray());
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    $uiModules = collect(config('permission.ui.modules'));
+    $dynamicModules = collect();
+    $allPermissions = Permission::pluck('name')->toArray();
+
+    if (Schema::hasTable('modules')) {
+        $dynamicQuery = Module::query()
+            ->orderBy('sort_order')
+            ->orderBy('title');
+
+        // Only link modules are permission-bearing items.
+        if (Schema::hasColumn('modules', 'menu_type')) {
+            $dynamicQuery->where('menu_type', 'link');
+        }
+
+        $dynamicModules = $dynamicQuery
+            ->get()
+            ->filter(function ($module) use ($allPermissions) {
+                foreach (['view', 'create', 'update', 'delete'] as $action) {
+                    if (in_array("{$action}_{$module->slug}", $allPermissions, true)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            ->mapWithKeys(fn ($module) => [
+                $module->slug => [
+                    'label' => $module->title,
+                    'order' => 1000 + (int) $module->sort_order,
+                ],
+            ]);
+    }
+
+    $uiModules = $uiModules->merge($dynamicModules);
     $actions   = array_keys(config('permission.ui.actions'));
 
     $modules = collect($uiModules)->map(function ($config, $moduleKey) use ($actions) {
@@ -28,7 +72,17 @@ class RolePermissionController extends Controller
             'order' => $config['order'] ?? 999,
             'permissions' => $permissions,
         ];
-    })->sortBy('order');
+    })
+    ->filter(function ($module) use ($allPermissions) {
+        foreach ($module['permissions'] as $permissionName) {
+            if (in_array($permissionName, $allPermissions, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    })
+    ->sortBy('order');
 
     // Permissions NOT tied to modules (dashboards, system, etc.)
 $specialPermissions = Permission::whereIn('name', [
@@ -51,6 +105,7 @@ $specialPermissions = Permission::whereIn('name', [
 
     if ($role->name === 'super_admin') {
         $role->syncPermissions(Permission::all());
+<<<<<<< HEAD
 
         $newPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
         AuditTrail::log(
@@ -61,6 +116,9 @@ $specialPermissions = Permission::whereIn('name', [
             tags: 'permissions'
         );
 
+=======
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+>>>>>>> origin/IBTS-v1
         return back()->with('success', 'Super Admin always has full access.');
     }
 
@@ -68,6 +126,7 @@ $specialPermissions = Permission::whereIn('name', [
 
     // Sync only selected permissions
     $role->syncPermissions($permissions);
+<<<<<<< HEAD
     $newPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
 
     AuditTrail::log(
@@ -77,6 +136,9 @@ $specialPermissions = Permission::whereIn('name', [
         newValues: ['permissions' => $newPermissions],
         tags: 'permissions'
     );
+=======
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+>>>>>>> origin/IBTS-v1
 
     return back()->with('success', 'Role permissions updated successfully.');
 }

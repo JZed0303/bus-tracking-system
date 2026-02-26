@@ -105,7 +105,8 @@
                                 <button class="btn btn-primary btn-view-bus"
                                         data-id="{{ $bus->id }}"
                                         data-bs-toggle="modal"
-                                        data-bs-target="#viewBusModal">
+                                        data-bs-target="#viewBusModal"
+                                        title="View Bus">
                                     <i class="mdi mdi-eye-outline"></i>
                                 </button>
 
@@ -114,14 +115,16 @@
                                         data-id="{{ $bus->id }}"
                                         data-plate="{{ $bus->plate_number }}"
                                         data-bs-toggle="modal"
-                                        data-bs-target="#busLocationModal">
+                                        data-bs-target="#busLocationModal"
+                                        title="View Last Location">
                                     <i class="mdi mdi-map-marker-radius-outline"></i>
                                 </button>
 
                                 <!-- EDIT -->
-                                <button class="btn btn-warning"
+                                <button class="btn btn-warning btn-edit-bus"
                                         data-bs-toggle="modal"
-                                        data-bs-target="#editBusModal{{ $bus->id }}">
+                                        data-bs-target="#editBusModal{{ $bus->id }}"
+                                        title="Edit Bus">
                                     <i class="mdi mdi-pencil-outline"></i>
                                 </button>
 
@@ -324,6 +327,10 @@ $(function () {
         columnDefs: [
             { targets: [0, 5], orderable: false }, // Photo + Actions
         ],
+    });
+
+    $('.btn-view-bus, .btn-view-bus-location, .btn-edit-bus').each(function () {
+        new bootstrap.Tooltip(this);
     });
 
 });

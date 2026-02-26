@@ -14,23 +14,30 @@
     <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet" />
 
     <style>
-        /* Centered avatar uploader */
+        /* ===============================
+           COMPANY LOGO (CENTERED)
+           =============================== */
         .company-logo-uploader {
-            width: 120px;
+            width: 130px;
             margin: 0 auto;
         }
 
+        .company-logo-uploader .filepond--root,
         .company-logo-uploader .filepond--panel-root,
         .company-logo-uploader .filepond--item-panel {
             border-radius: 50%;
         }
 
         .company-logo-uploader .filepond--drop-label {
-            min-height: 120px;
+            min-height: 130px;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
+        }
+
+        .company-logo-uploader .filepond--root {
+            height: 130px;
         }
     </style>
 @endsection
@@ -42,12 +49,12 @@
 @section('content')
 <div class="container-fluid">
 
-    <!-- Page Header -->
-    <div class="row mb-3">
+    <!-- PAGE HEADER -->
+    <div class="row mb-4">
         <div class="col">
-            <h4 class="mb-0">Edit Company</h4>
+            <h4 class="mb-1">Edit Company</h4>
             <small class="text-muted">
-                Update company details and branding.
+                Update company profile and branding details.
             </small>
         </div>
         <div class="col text-end">
@@ -61,7 +68,7 @@
     <div class="card">
         <div class="card-body">
 
-            <h4 class="card-title mb-3">Company Information</h4>
+            <h5 class="card-title mb-4">Company Information</h5>
 
             <form method="POST"
                   action="{{ route('admin.companies.update', $company->id) }}"
@@ -69,35 +76,37 @@
                 @csrf
                 @method('PUT')
 
-              {{-- COMPANY LOGO --}}
-<div class="row mb-4 align-items-center">
-    <label class="col-sm-3 col-form-label">
-        Company Logo
-    </label>
+                {{-- COMPANY LOGO --}}
+                <div class="row mb-4">
+                    <div class="col-12 text-center">
+                        <label class="form-label d-block mb-2">
+                            Company Logo
+                        </label>
 
-    <div class="col-sm-9">
-        <div class="company-logo-uploader text-center">
-            <input type="file"
-                   name="logo"
-                   id="companyLogo"
-                   class="filepond"
-                   accept="image/png,image/jpeg">
+                        <div class="company-logo-uploader mx-auto">
+                            <input type="file"
+                                   name="logo"
+                                   id="companyLogo"
+                                   class="filepond"
+                                   accept="image/png,image/jpeg">
+                        </div>
 
-            <small class="text-muted d-block mt-2">
-                Drag & drop or click to replace
-            </small>
+                        <small class="text-muted d-block mt-2">
+                            Drag & drop or click to replace
+                        </small>
+                        @error('logo')
+                            <div class="text-danger mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
 
-            @error('logo')
-                <div class="text-danger mt-1">{{ $message }}</div>
-            @enderror
-        </div>
-    </div>
-</div>
+                <hr class="my-4">
 
-                <!-- Company Name -->
-                <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Company Name</label>
-                    <div class="col-sm-9">
+                {{-- COMPANY DETAILS --}}
+                <div class="row g-3 mb-4">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Company Name</label>
                         <input type="text"
                                name="name"
                                class="form-control @error('name') is-invalid @enderror"
@@ -107,12 +116,9 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                </div>
 
-                <!-- Contact Person -->
-                <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Contact Person</label>
-                    <div class="col-sm-9">
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Person</label>
                         <input type="text"
                                name="contact_person"
                                class="form-control @error('contact_person') is-invalid @enderror"
@@ -121,12 +127,9 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                </div>
 
-                <!-- Contact Number -->
-                <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Contact Number</label>
-                    <div class="col-sm-9">
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Number</label>
                         <input type="text"
                                name="contact_number"
                                class="form-control @error('contact_number') is-invalid @enderror"
@@ -135,25 +138,9 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                </div>
 
-                <!-- Address -->
-                <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Address</label>
-                    <div class="col-sm-9">
-                        <textarea name="address"
-                                  class="form-control @error('address') is-invalid @enderror"
-                                  rows="3">{{ old('address', $company->address) }}</textarea>
-                        @error('address')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-
-                <!-- Status -->
-                <div class="row mb-4">
-                    <label class="col-sm-3 col-form-label">Status</label>
-                    <div class="col-sm-9">
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
                         <select name="status"
                                 class="form-select @error('status') is-invalid @enderror">
                             <option value="active" @selected(old('status', $company->status) === 'active')>
@@ -167,19 +154,61 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Address</label>
+                        <textarea name="address"
+                                  rows="3"
+                                  class="form-control @error('address') is-invalid @enderror">{{ old('address', $company->address) }}</textarea>
+                        @error('address')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                 </div>
 
-                <!-- ACTIONS -->
-                <div class="row">
-                    <div class="col-sm-9 offset-sm-3">
-                        <button type="submit" class="btn btn-primary">
-                            Update Company
-                        </button>
-                        <a href="{{ route('admin.companies.index') }}"
-                           class="btn btn-secondary">
-                            Cancel
-                        </a>
+                <hr class="my-4">
+
+                {{-- COMPANY ADMIN ACCOUNT --}}
+                <h5 class="mb-3">Company Admin Account</h5>
+
+                <div class="row g-3 mb-4">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Admin Email</label>
+                        <input type="email"
+                               name="admin_email"
+                               class="form-control @error('admin_email') is-invalid @enderror"
+                               value="{{ old('admin_email', $companyAdmin?->email) }}"
+                               required>
+                        @error('admin_email')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Admin Password</label>
+                        <input type="password"
+                               name="admin_password"
+                               class="form-control @error('admin_password') is-invalid @enderror"
+                               placeholder="{{ $companyAdmin ? 'Leave blank to keep current password' : 'Required' }}">
+                        @error('admin_password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                </div>
+
+                {{-- ACTIONS --}}
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a href="{{ route('admin.companies.index') }}"
+                       class="btn btn-light px-4">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="btn btn-primary px-4">
+                        Update Company
+                    </button>
                 </div>
 
             </form>
@@ -196,29 +225,27 @@
 {{-- FilePond --}}
 <script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
 <script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
+
 <script>
-FilePond.registerPlugin(FilePondPluginImagePreview);
+    FilePond.registerPlugin(FilePondPluginImagePreview);
 
-FilePond.create(document.querySelector('#companyLogo'), {
-    allowMultiple: false,
-    instantUpload: false,
-    storeAsFile: true,
-    imagePreviewHeight: 120,
-    imageCropAspectRatio: '1:1',
-    imageResizeTargetWidth: 300,
-    imageResizeTargetHeight: 300,
-    stylePanelLayout: 'compact circle',
-    labelIdle: 'Drop logo<br><span class="filepond--label-action">Browse</span>',
-
-    files: [
-        {
-            source: "{{ $company->logo_url }}",
-            options: {
-                type: 'remote', // ✅ IMPORTANT
+    FilePond.create(document.querySelector('#companyLogo'), {
+        name: 'logo',
+        allowMultiple: false,
+        instantUpload: false,
+        storeAsFile: true,
+        imagePreviewHeight: 130,
+        imageCropAspectRatio: '1:1',
+        imageResizeTargetWidth: 300,
+        imageResizeTargetHeight: 300,
+        stylePanelLayout: 'compact circle',
+        labelIdle: 'Upload Logo',
+        files: [
+            {
+                source: "{{ $company->logo_url }}",
+                options: { type: 'remote' }
             }
-        }
-    ]
-});
+        ]
+    });
 </script>
-
 @endsection

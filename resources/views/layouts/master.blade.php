@@ -48,7 +48,7 @@
     {{-- NOTE:
          `worthy-global-override.css` is now handled by Vite.
          Make sure you have:
-         import '../css/worthy-global-override.css';
+     import '../css/hm-global-override.css';
          inside resources/js/app.jsx
     --}}
 

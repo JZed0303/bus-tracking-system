@@ -77,6 +77,15 @@ body.vertical-collapsed .menu-title {
 .sidebar-user-text .text-truncate {
     max-width: 180px;
 }
+.sidebar-user-logo {
+    max-width: 150px;
+    width: 100%;
+    height: auto;
+    margin: 0 auto 0px;
+    display: block;
+}a.btn.btn-sm:hover{
+    color:white!important;
+}
 
 /* Collapsed mode: constrain user text */
 body.vertical-collapsed .sidebar-user-text .text-truncate {
@@ -120,9 +129,14 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
         <div id="sidebar-menu">
 
             {{-- USER --}}
+              <img src="{{ asset('images/sidebar-logo.png') }}"
+                             alt="HM Transport Logo"
+                             class="sidebar-user-logo">
             <div class="sidebar-user-box">
                 <div class="d-flex align-items-center justify-content-center w-100">
+                    
                     <div class="sidebar-user-text text-center overflow-hidden">
+                      
                         <div class="text-white fw-semibold text-truncate">
                             {{ auth()->user()->full_name }}
                         </div>
@@ -211,7 +225,9 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
 
                             @if (auth()->user()->canByRole('view_drivers'))
                                 <li>
-                                    <a href="{{ route('admin.drivers.index') }}">
+                                    <a href="{{ auth()->user()->isCompanyUser()
+                                        ? route('company.drivers.index')
+                                        : route('admin.drivers.index') }}">
                                         <i class="ri-user-location-fill me-1"></i>
                                         Drivers
                                     </a>
@@ -312,7 +328,7 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                                 </li>
                             @endif
 
-                        @if (auth()->user()->canByRole('view_assignments'))
+@if (auth()->user()->canByRole('view_assignments'))
     <li>
         <a href="{{ auth()->user()->isCompanyUser()
                     ? route('company.assignments.index')
@@ -322,6 +338,15 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
         </a>
     </li>
 @endif
+
+                            <li>
+                                <a href="{{ auth()->user()->isCompanyUser()
+                                    ? route('company.calendar.index')
+                                    : route('admin.calendar.index') }}">
+                                    <i class="ri-calendar-check-line me-1"></i>
+                                    Calendar
+                                </a>
+                            </li>
 
 
                             @if (auth()->user()->canByRole('view_live_tracking'))
@@ -336,7 +361,205 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                         </ul>
                     </li>
                 @endif
+<<<<<<< HEAD
                 {{-- ================= ADMINISTRATIONS ================= --}}
+=======
+
+                {{-- ================= DYNAMIC MODULES ================= --}}
+                @php
+                    $dynamicHeaders = collect();
+                    $dynamicDropdowns = collect();
+                    $dynamicLinks = collect();
+                    if (\Illuminate\Support\Facades\Schema::hasTable('modules')) {
+                        $existingPermissionNames = \Spatie\Permission\Models\Permission::query()
+                            ->pluck('name')
+                            ->all();
+
+                        $allDynamicModules = \App\Models\Module::query()
+                            ->where('is_active', true)
+                            ->with('children')
+                            ->orderBy('sort_order')
+                            ->orderBy('title')
+                            ->get()
+                            ->filter(function ($module) use ($existingPermissionNames) {
+                                if ($module->menu_type === 'header' || $module->menu_type === 'dropdown') {
+                                    return true;
+                                }
+
+                                $viewPermission = 'view_' . $module->slug;
+                                if (!in_array($viewPermission, $existingPermissionNames, true)) {
+                                    return false;
+                                }
+
+                                return auth()->user()->canByRole($viewPermission);
+                            });
+
+                        $dynamicLinks = $allDynamicModules
+                            ->where('menu_type', 'link');
+
+                        $dynamicDropdowns = $allDynamicModules
+                            ->where('menu_type', 'dropdown')
+                            ->filter(function ($dropdownModule) use ($dynamicLinks) {
+                                // Dropdown is a container only: show it only when it has visible child links.
+                                return $dynamicLinks->where('parent_id', $dropdownModule->id)->isNotEmpty();
+                            });
+
+                        $dynamicHeaders = $allDynamicModules
+                            ->where('menu_type', 'header')
+                            ->whereNull('parent_id')
+                            ->filter(function ($headerModule) use ($dynamicDropdowns, $dynamicLinks) {
+                                // Header is a label only: show it only when it has visible children.
+                                return $dynamicDropdowns->where('parent_id', $headerModule->id)->isNotEmpty()
+                                    || $dynamicLinks->where('parent_id', $headerModule->id)->isNotEmpty();
+                            });
+                    }
+                @endphp
+
+                @if ($dynamicHeaders->isNotEmpty() || $dynamicDropdowns->isNotEmpty() || $dynamicLinks->isNotEmpty())
+                 
+                    @foreach ($dynamicHeaders as $headerModule)
+                        <li class="menu-title">{{ $headerModule->title }}</li>
+
+                        @foreach ($dynamicDropdowns->where('parent_id', $headerModule->id) as $dropdownModule)
+                            @php
+                                $visibleChildren = $dynamicLinks->where('parent_id', $dropdownModule->id);
+                                $dropdownHref = 'javascript:void(0);';
+                                if (!empty($dropdownModule->route_name) && \Illuminate\Support\Facades\Route::has($dropdownModule->route_name)) {
+                                    $dropdownHref = route($dropdownModule->route_name);
+                                } elseif (!empty($dropdownModule->menu_url)) {
+                                    $dropdownHref = \Illuminate\Support\Str::startsWith($dropdownModule->menu_url, ['http://', 'https://'])
+                                        ? $dropdownModule->menu_url
+                                        : url($dropdownModule->menu_url);
+                                }
+                            @endphp
+                            @if ($visibleChildren->isNotEmpty())
+                                <li>
+                                    <a href="javascript:void(0);" class="has-arrow">
+                                        <i class="{{ $dropdownModule->icon }}"></i>
+                                        <span>{{ $dropdownModule->title }}</span>
+                                    </a>
+                                    <ul class="sub-menu">
+                                        @foreach ($visibleChildren as $module)
+                                            @php
+                                                $moduleHref = 'javascript:void(0);';
+                                                if (!empty($module->route_name) && \Illuminate\Support\Facades\Route::has($module->route_name)) {
+                                                    $moduleHref = route($module->route_name);
+                                                } elseif (!empty($module->menu_url)) {
+                                                    $moduleHref = \Illuminate\Support\Str::startsWith($module->menu_url, ['http://', 'https://'])
+                                                        ? $module->menu_url
+                                                        : url($module->menu_url);
+                                                }
+                                            @endphp
+                                            <li>
+                                                <a href="{{ $moduleHref }}">
+                                                    <i class="{{ $module->icon }}"></i>
+                                                    <span>{{ $module->title }}</span>
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </li>
+                            @else
+                                <li>
+                                    <a href="{{ $dropdownHref }}">
+                                        <i class="{{ $dropdownModule->icon }}"></i>
+                                        <span>{{ $dropdownModule->title }}</span>
+                                    </a>
+                                </li>
+                            @endif
+                        @endforeach
+
+                        @foreach ($dynamicLinks->where('parent_id', $headerModule->id) as $module)
+                            @php
+                                $moduleHref = 'javascript:void(0);';
+                                if (!empty($module->route_name) && \Illuminate\Support\Facades\Route::has($module->route_name)) {
+                                    $moduleHref = route($module->route_name);
+                                } elseif (!empty($module->menu_url)) {
+                                    $moduleHref = \Illuminate\Support\Str::startsWith($module->menu_url, ['http://', 'https://'])
+                                        ? $module->menu_url
+                                        : url($module->menu_url);
+                                }
+                            @endphp
+                            <li>
+                                <a href="{{ $moduleHref }}">
+                                    <i class="{{ $module->icon }}"></i>
+                                    <span>{{ $module->title }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    @endforeach
+
+                    @foreach ($dynamicDropdowns->whereNull('parent_id') as $dropdownModule)
+                        @php
+                            $visibleChildren = $dynamicLinks->where('parent_id', $dropdownModule->id);
+                            $dropdownHref = 'javascript:void(0);';
+                            if (!empty($dropdownModule->route_name) && \Illuminate\Support\Facades\Route::has($dropdownModule->route_name)) {
+                                $dropdownHref = route($dropdownModule->route_name);
+                            } elseif (!empty($dropdownModule->menu_url)) {
+                                $dropdownHref = \Illuminate\Support\Str::startsWith($dropdownModule->menu_url, ['http://', 'https://'])
+                                    ? $dropdownModule->menu_url
+                                    : url($dropdownModule->menu_url);
+                            }
+                        @endphp
+                        @if ($visibleChildren->isNotEmpty())
+                            <li>
+                                <a href="javascript:void(0);" class="has-arrow">
+                                    <i class="{{ $dropdownModule->icon }}"></i>
+                                    <span>{{ $dropdownModule->title }}</span>
+                                </a>
+                                <ul class="sub-menu">
+                                    @foreach ($visibleChildren as $module)
+                                        @php
+                                            $moduleHref = 'javascript:void(0);';
+                                            if (!empty($module->route_name) && \Illuminate\Support\Facades\Route::has($module->route_name)) {
+                                                $moduleHref = route($module->route_name);
+                                            } elseif (!empty($module->menu_url)) {
+                                                $moduleHref = \Illuminate\Support\Str::startsWith($module->menu_url, ['http://', 'https://'])
+                                                    ? $module->menu_url
+                                                    : url($module->menu_url);
+                                            }
+                                        @endphp
+                                        <li>
+                                            <a href="{{ $moduleHref }}">
+                                                <i class="{{ $module->icon }}"></i>
+                                                <span>{{ $module->title }}</span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </li>
+                        @else
+                            <li>
+                                <a href="{{ $dropdownHref }}">
+                                    <i class="{{ $dropdownModule->icon }}"></i>
+                                    <span>{{ $dropdownModule->title }}</span>
+                                </a>
+                            </li>
+                        @endif
+                    @endforeach
+
+                    @foreach ($dynamicLinks->whereNull('parent_id') as $module)
+                        @php
+                            $moduleHref = 'javascript:void(0);';
+                            if (!empty($module->route_name) && \Illuminate\Support\Facades\Route::has($module->route_name)) {
+                                $moduleHref = route($module->route_name);
+                            } elseif (!empty($module->menu_url)) {
+                                $moduleHref = \Illuminate\Support\Str::startsWith($module->menu_url, ['http://', 'https://'])
+                                    ? $module->menu_url
+                                    : url($module->menu_url);
+                            }
+                        @endphp
+                        <li>
+                            <a href="{{ $moduleHref }}">
+                                <i class="{{ $module->icon }}"></i>
+                                <span>{{ $module->title }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                @endif
+
+                {{-- ================= ADMINISTRATION ================= --}}
+>>>>>>> origin/IBTS-v1
 @can('manage_roles')
     <li class="menu-title">Administrations</li>
 <li>
@@ -353,6 +576,7 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
             <span>Roles & Permissions</span>
         </a>
     </li>
+<<<<<<< HEAD
 
     @php($isAuditTrailRoute = request()->routeIs('admin.audit-trail.*'))
     <li class="{{ $isAuditTrailRoute ? 'mm-active' : '' }}">
@@ -361,6 +585,16 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
             <span>Audit Trail</span>
         </a>
     </li>
+=======
+    @if (auth()->user()->isAdminUser())
+        <li>
+            <a href="{{ route('admin.modules.index') }}">
+                <i class="ri-apps-2-line"></i>
+                <span>Module Management</span>
+            </a>
+        </li>
+    @endif
+>>>>>>> origin/IBTS-v1
 @endcan
 
 

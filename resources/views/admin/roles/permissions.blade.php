@@ -14,6 +14,11 @@
 
 @section('content')
 <div class="container-fluid">
+    @php
+        $existingPermissionNames = \Spatie\Permission\Models\Permission::query()
+            ->pluck('name')
+            ->all();
+    @endphp
 
     {{-- HEADER --}}
     <div class="row mb-4">
@@ -77,7 +82,7 @@
                                 @foreach ($actions as $action)
                               @php
     $permission = "{$action}_{$moduleKey}";
-    $exists = true; // permission exists because CRUD is explicit
+    $exists = in_array($permission, $existingPermissionNames, true);
 @endphp
 
                                     <td class="text-center">
@@ -88,7 +93,7 @@
        value="{{ $permission }}"
        data-module="{{ $moduleKey }}"
        data-action="{{ $action }}"
-       {{ $role->hasPermissionTo($permission) ? 'checked' : '' }}
+       {{ ($exists && $role->hasPermissionTo($permission)) ? 'checked' : '' }}
        {{ $role->name === 'super_admin' ? 'disabled' : '' }}>
 
                                         @else
@@ -164,6 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const create = row.querySelector('[data-action="create"]');
         const update = row.querySelector('[data-action="update"]');
         const del    = row.querySelector('[data-action="delete"]');
+
+        // Some dynamic modules (e.g. headers) may have no CRUD permissions.
+        if (!view || !create || !update || !del) {
+            return;
+        }
 
         // Update/Delete require View
         if ((update.checked || del.checked) && !view.checked) {

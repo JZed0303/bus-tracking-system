@@ -135,6 +135,7 @@ export default function LiveBusMap() {
 
   const mapRef = useRef(null);
   const markerRefs = useRef(new Map());
+  const didAutoFollowRef = useRef(false);
 
   // Timers
   const OFFLINE_REMOVE_MS = 10 * 60 * 1000; // purge from state after 10 minutes
@@ -143,6 +144,10 @@ export default function LiveBusMap() {
 
   const DEFAULT_CENTER = [14.3290, 121.0450];
   const DEFAULT_ZOOM = 13;
+  const initialTripIdParam =
+    typeof window !== 'undefined'
+      ? Number(new URLSearchParams(window.location.search).get('trip'))
+      : null;
 
   const role = String(window.userRole || '').toLowerCase();
   const companyId = window.companyId ?? null;
@@ -373,6 +378,21 @@ export default function LiveBusMap() {
 
     return () => clearInterval(t);
   }, [followBusId, buses]);
+
+  /* =========================================
+     Auto-follow trip from query (?trip=ID)
+  ========================================= */
+  useEffect(() => {
+    if (didAutoFollowRef.current) return;
+    if (!Number.isFinite(initialTripIdParam)) return;
+    if (!buses.length) return;
+
+    const target = buses.find((b) => Number(b.trip_id) === initialTripIdParam);
+    if (!target) return;
+
+    flyToBus(target, { follow: true });
+    didAutoFollowRef.current = true;
+  }, [buses, initialTripIdParam]);
 
   /* =========================================
      Render
