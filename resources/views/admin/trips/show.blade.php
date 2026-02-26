@@ -13,6 +13,60 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin=""
     />
+    <style>
+        .trip-hero-card {
+            border: 0;
+            border-radius: 14px;
+            box-shadow: 0 8px 22px rgba(20, 33, 61, 0.08);
+        }
+        .trip-kpi-card {
+            border: 1px solid #e9edf4;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+            padding: 14px;
+            height: 100%;
+        }
+        .trip-kpi-label {
+            font-size: 11px;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: #7c8799;
+            margin-bottom: 4px;
+        }
+        .trip-kpi-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1f2a37;
+            margin-bottom: 0;
+        }
+        .trip-bus-photo {
+            width: 100%;
+            max-width: 320px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #e9edf4;
+            background: #f8fafc;
+            display: block;
+            margin-top: 10px;
+        }
+        .trip-driver-photo {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid #e9edf4;
+            background: #f8fafc;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .timeline-detail-table th {
+            width: 260px;
+            background: #f8fafc;
+            color: #5f6c80;
+            font-weight: 600;
+        }
+    </style>
 @endsection
 
 @section('page-title', 'Trip Details')
@@ -24,6 +78,17 @@
 @section('content')
 @php
     $tab = request()->query('tab', 'timeline');
+    $tz = 'Asia/Manila';
+    $statusColor = match ($trip->status) {
+        'ongoing'   => 'success',
+        'completed' => 'primary',
+        'cancelled' => 'danger',
+        default     => 'secondary',
+    };
+
+    $summaryScheduledStart = $trip->scheduled_start_time?->timezone($tz);
+    $summaryActualStart = $trip->actual_start_time?->timezone($tz);
+    $summaryActualEnd = $trip->actual_end_time?->timezone($tz);
 @endphp
 
 <div class="container-fluid">
@@ -44,59 +109,80 @@
     </div>
 
     {{-- TRIP SUMMARY HEADER --}}
-    <div class="card mb-3 shadow-sm border-0">
+    <div class="card mb-3 trip-hero-card">
         <div class="card-body">
-            <div class="row gy-3 align-items-center">
-                <div class="col-md-4">
-                    <h6 class="text-uppercase text-muted mb-1">Trip Reference</h6>
-                    <div class="d-flex align-items-center">
-                        <div class="me-2 text-primary">
-                            <i class="mdi mdi-bus font-size-24"></i>
-                        </div>
-                        <div>
-                            <div class="fw-semibold">
-                                {{ optional($trip->assignment->bus)->plate_number ?? 'Unassigned Bus' }}
+            <div class="row g-3 align-items-stretch">
+                <div class="col-lg-5">
+                    <div class="trip-kpi-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <p class="trip-kpi-label">Trip Reference</p>
+                                <h5 class="mb-1">
+                                    {{ optional($trip->assignment->bus)->plate_number ?? 'Unassigned Bus' }}
+                                </h5>
+                                <p class="mb-0 text-muted">
+                                    {{ optional($trip->assignment->route)->name ?? 'No route linked' }}
+                                </p>
                             </div>
-                            <small class="text-muted">
-                                {{ optional($trip->assignment->route)->name ?? 'No route linked' }}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4 border-start-md">
-                    <h6 class="text-uppercase text-muted mb-1">Driver</h6>
-                    <div class="d-flex align-items-center">
-                        <div class="me-2 text-success">
-                            <i class="mdi mdi-account-tie font-size-24"></i>
-                        </div>
-                        <div>
-                            <div class="fw-semibold">
-                                {{ optional($trip->assignment->driver?->user)->full_name ?? 'Unassigned Driver' }}
-                            </div>
-                            <small class="text-muted">
-                                {{ $trip->scheduled_start_time?->format('M d, Y') ?? '—' }}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4 border-start-md">
-                    <h6 class="text-uppercase text-muted mb-1">Status & Schedule</h6>
-                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-1">
-                        <div>
-                            <span class="badge bg-success text-uppercase px-3">
+                            <span class="badge bg-{{ $statusColor }} text-uppercase px-3 py-2">
                                 {{ ucfirst($trip->status) }}
                             </span>
                         </div>
-                        <div class="small text-muted">
-                            <div>
-                                <span class="fw-semibold">Scheduled:</span>
-                                {{ $trip->scheduled_start_time?->format('M d, Y H:i') ?? '—' }}
+                        <img
+                            src="{{ optional($trip->assignment->bus)->photo_url ?? asset('build/images/bus-placeholder.png') }}"
+                            alt="Bus Photo"
+                            class="trip-bus-photo"
+                        >
+                        <div class="small text-muted mt-3">
+                            <span class="fw-semibold text-dark">Direction:</span> {{ $trip->direction_label }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Driver</p>
+                                <img
+                                    src="{{ optional($trip->assignment->driver)->photo_url ?? asset('build/images/user-placeholder.png') }}"
+                                    alt="Driver Photo"
+                                    class="trip-driver-photo"
+                                >
+                                <p class="trip-kpi-value">
+                                    {{ optional($trip->assignment->driver?->user)->full_name ?? 'Unassigned Driver' }}
+                                </p>
+                                <p class="mb-0 text-muted small">Assigned operator</p>
                             </div>
-                            <div>
-                                <span class="fw-semibold">Actual:</span>
-                                {{ $trip->actual_start_time?->format('M d, Y H:i') ?? '—' }}
+                        </div>
+
+                        <div class="col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Trip Date</p>
+                                <p class="trip-kpi-value">
+                                    {{ $trip->trip_date?->timezone($tz)->format('M d, Y') ?? '—' }}
+                                </p>
+                                <p class="mb-0 text-muted small">Philippines time (PHT)</p>
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Trip Start</p>
+                                <p class="trip-kpi-value">
+                                    {{ $summaryActualStart?->format('h:iA') ?? '—' }}
+                                </p>
+                                <p class="mb-0 text-muted small">{{ $summaryActualStart?->format('M d, Y') ?? '' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Trip End</p>
+                                <p class="trip-kpi-value">
+                                    {{ $summaryActualEnd?->format('h:iA') ?? '—' }}
+                                </p>
+                                <p class="mb-0 text-muted small">{{ $summaryActualEnd?->format('M d, Y') ?? '' }}</p>
                             </div>
                         </div>
                     </div>
@@ -138,35 +224,92 @@
 
             {{-- TIMELINE TAB --}}
             @if($tab === 'timeline')
+                @php
+                    $scheduledStart = $trip->scheduled_start_time?->timezone($tz);
+                    $scheduledEnd = $trip->scheduled_end_time?->timezone($tz);
+                    $actualStart = $trip->actual_start_time?->timezone($tz);
+                    $actualEnd = $trip->actual_end_time?->timezone($tz);
+
+                    $durationMinutes = ($actualStart && $actualEnd)
+                        ? $actualStart->diffInMinutes($actualEnd)
+                        : null;
+
+                    $gpsPointsCount = $trip->locations()->count();
+                    $latestScanByEmployee = $trip->checkins
+                        ->sortBy('scan_time')
+                        ->groupBy('employee_id')
+                        ->map(fn ($rows) => $rows->last());
+                    $totalEmployeesCount = $latestScanByEmployee->count();
+                    $onboardNowCount = $latestScanByEmployee
+                        ->filter(fn ($scan) => $scan && $scan->scan_type === 'checkin')
+                        ->count();
+                    $completedRideCount = $latestScanByEmployee
+                        ->filter(fn ($scan) => $scan && $scan->scan_type === 'checkout')
+                        ->count();
+                @endphp
+
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h5 class="card-title mb-1">Trip Timeline</h5>
                         <p class="card-subtitle text-muted mb-0">
-                            High-level view of the planned and actual execution of this trip.
+                            Detailed breakdown of this trip in Philippines time (PHT).
                         </p>
                     </div>
                 </div>
 
-                <table class="table table-sm align-middle mb-0">
-                    <tbody>
-                    <tr>
-                        <th scope="row" class="text-muted" style="width: 220px;">Scheduled Start</th>
-                        <td>{{ $trip->scheduled_start_time?->format('M d, Y H:i') ?? '—' }}</td>
-                    </tr>
-                    <tr>
-                        <th scope="row" class="text-muted">Actual Start</th>
-                        <td>{{ $trip->actual_start_time?->format('M d, Y H:i') ?? '—' }}</td>
-                    </tr>
-                    <tr>
-                        <th scope="row" class="text-muted">Status</th>
-                        <td>
-                            <span class="badge bg-success px-3">
-                                {{ ucfirst($trip->status) }}
-                            </span>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+                <div class="row g-3 mb-3">
+                    @if($scheduledStart || $scheduledEnd)
+                        <div class="col-lg-2 col-md-4 col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Planned Time</p>
+                                <p class="trip-kpi-value">{{ $scheduledStart?->format('h:iA') ?? '—' }}</p>
+                                <p class="mb-0 text-muted small">to {{ $scheduledEnd?->format('h:iA') ?? '—' }}</p>
+                            </div>
+                        </div>
+                    @endif
+                    @if($actualStart || $actualEnd)
+                        <div class="col-lg-2 col-md-4 col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Actual Time</p>
+                                <p class="trip-kpi-value">{{ $actualStart?->format('h:iA') ?? '—' }}</p>
+                                <p class="mb-0 text-muted small">to {{ $actualEnd?->format('h:iA') ?? '—' }}</p>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="trip-kpi-card">
+                            <p class="trip-kpi-label">Trip Duration</p>
+                            <p class="trip-kpi-value">
+                                @if(is_null($durationMinutes))
+                                    —
+                                @else
+                                    {{ intdiv($durationMinutes, 60) }}h {{ $durationMinutes % 60 }}m
+                                @endif
+                            </p>
+                            <p class="mb-0 text-muted small">Based on actual start and end</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-6 col-sm-6">
+                        <div class="trip-kpi-card">
+                            <p class="trip-kpi-label">Total Employees</p>
+                            <p class="trip-kpi-value">{{ $totalEmployeesCount }}</p>
+                            <p class="mb-0 text-muted small">Unique employees with scans</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6 col-sm-12">
+                        <div class="trip-kpi-card">
+                            <p class="trip-kpi-label">Employee Boarding</p>
+                            <p class="trip-kpi-value">
+                                {{ $onboardNowCount }} On Board
+                            </p>
+                            <p class="mb-0 text-muted small">
+                                {{ $completedRideCount }} Completed Ride
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+           
             @endif
 
             {{-- CHECK-INS TAB --}}
@@ -186,20 +329,25 @@
                         <span class="text-muted">No check-in data has been recorded for this trip.</span>
                     </div>
                 @else
+                    @php
+                        $checkinRows = $trip->checkins->sortByDesc('scan_time')->values();
+                    @endphp
                     <div class="table-responsive">
                         <table id="checkins-table"
-                               class="table table-bordered table-striped table-hover table-sm dt-responsive nowrap mb-0"
+                               class="table table-bordered table-striped table-hover table-sm dt-responsive mb-0"
                                style="width:100%">
                             <thead class="table-light">
                             <tr>
+                                <th style="width: 60px;">#</th>
                                 <th>Employee</th>
-                                <th>Type</th>
-                                <th style="width: 220px;">Scanned At</th>
+                                <th style="width: 140px;">Type</th>
+                                <th style="width: 240px;">Scanned At (PHT)</th>
                             </tr>
                             </thead>
                             <tbody>
-                            @foreach($trip->checkins as $checkin)
+                            @foreach($checkinRows as $index => $checkin)
                                 <tr>
+                                    <td>{{ $index + 1 }}</td>
                                     <td>
                                         {{ optional($checkin->employee?->user)->full_name ?? '—' }}
                                     </td>
@@ -216,8 +364,8 @@
                                     </td>
                                     <td>
                                         {{ $checkin->scan_time
-                                            ->timezone(config('app.timezone'))
-                                            ->format('M d, Y H:i') }}
+                                            ->timezone('Asia/Manila')
+                                            ->format('M d, Y h:iA') }}
                                     </td>
                                 </tr>
                             @endforeach
@@ -368,7 +516,10 @@
                 $('#checkins-table').DataTable({
                     responsive: true,
                     pageLength: 10,
-                    order: [[2, 'asc']]
+                    order: [[3, 'desc']],
+                    columnDefs: [
+                        { targets: 0, orderable: false, searchable: false }
+                    ]
                 });
             @endif
 

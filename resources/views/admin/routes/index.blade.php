@@ -19,6 +19,25 @@ Route Management
 
 @section('content')
 <div class="container-fluid">
+    <style>
+        .route-actions .btn {
+            border-radius: 0 !important;
+            width: 2rem;
+            height: 2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .route-actions .btn:first-child {
+            border-top-left-radius: .25rem !important;
+            border-bottom-left-radius: .25rem !important;
+        }
+        .route-actions .btn:last-child {
+            border-top-right-radius: .25rem !important;
+            border-bottom-right-radius: .25rem !important;
+        }
+    </style>
 
     <!-- ROUTE TABLE -->
     <div class="card">
@@ -118,7 +137,7 @@ Route Management
                         <th>Stops</th>
                         <th>Active Trips</th>
                         <th>Status</th>
-                        <th width="180">Actions</th>
+                        <th width="240">Actions</th>
                     </tr>
                 </thead>
 
@@ -152,16 +171,40 @@ Route Management
                             </td>
 
                             <td>
-                                <div class="btn-group btn-group-sm">
+                                <div class="btn-group btn-group-sm route-actions">
                                     <a href="{{ route('admin.routes.show', $route->id) }}"
-                                       class="btn btn-info">
-                                        View
+                                       class="btn btn-info btn-sm"
+                                       data-bs-toggle="tooltip"
+                                       title="View Route">
+                                        <i class="mdi mdi-eye-outline"></i>
                                     </a>
 
                                     <a href="{{ route('admin.routes.edit', $route->id) }}"
-                                       class="btn btn-secondary">
-                                        Edit
+                                       class="btn btn-secondary btn-sm"
+                                       data-bs-toggle="tooltip"
+                                       title="Edit Route">
+                                        <i class="mdi mdi-pencil-outline"></i>
                                     </a>
+
+                                    @php
+                                        $canDeleteRoute = ((int) $route->active_trips_count === 0) && ((int) ($route->active_assignments_count ?? 0) === 0);
+                                    @endphp
+                                    @if($canDeleteRoute)
+                                        <form method="POST"
+                                              action="{{ route('admin.routes.destroy', $route->id) }}"
+                                              onsubmit="return confirm('Delete this route? This action cannot be undone.');"
+                                              class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" title="Delete Route">
+                                                <i class="mdi mdi-trash-can-outline"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button type="button" class="btn btn-danger btn-sm" disabled data-bs-toggle="tooltip" title="Cannot delete while route has active trips or assignments">
+                                            <i class="mdi mdi-trash-can-outline"></i>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -190,6 +233,8 @@ $(function () {
         pageLength: 10,
         order: [[0, 'asc']]
     });
+
+    $('[data-bs-toggle="tooltip"]').tooltip();
 });
 </script>
 @endsection

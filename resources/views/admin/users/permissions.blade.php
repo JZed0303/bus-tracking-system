@@ -9,6 +9,11 @@
 
 @section('content')
 <div class="container-fluid">
+    @php
+        $existingPermissionNames = \Spatie\Permission\Models\Permission::query()
+            ->pluck('name')
+            ->all();
+    @endphp
 
     {{-- HEADER --}}
     <div class="row mb-3">
@@ -82,6 +87,10 @@
     $create = "create_{$moduleKey}";
     $update = "update_{$moduleKey}";
     $delete = "delete_{$moduleKey}";
+    $viewExists = in_array($view, $existingPermissionNames, true);
+    $createExists = in_array($create, $existingPermissionNames, true);
+    $updateExists = in_array($update, $existingPermissionNames, true);
+    $deleteExists = in_array($delete, $existingPermissionNames, true);
 @endphp
 
 <tr>
@@ -89,47 +98,67 @@
 
     {{-- VIEW --}}
     <td class="text-center">
-        <input type="checkbox"
-               class="form-check-input perm-view"
-               name="permissions[]"
-               value="{{ $view }}"
-               {{ $user->hasDirectPermission($view) ? 'checked' : '' }}>
+        @if($viewExists)
+            <input type="checkbox"
+                   class="form-check-input perm-view"
+                   name="permissions[]"
+                   value="{{ $view }}"
+                   {{ $user->hasDirectPermission($view) ? 'checked' : '' }}>
+        @else
+            <span class="text-muted">—</span>
+        @endif
     </td>
 
     {{-- CREATE --}}
     <td class="text-center">
-        <input type="checkbox"
-               class="form-check-input perm-create"
-               name="permissions[]"
-               value="{{ $create }}"
-               {{ $user->hasDirectPermission($create) ? 'checked' : '' }}>
+        @if($createExists)
+            <input type="checkbox"
+                   class="form-check-input perm-create"
+                   name="permissions[]"
+                   value="{{ $create }}"
+                   {{ $user->hasDirectPermission($create) ? 'checked' : '' }}>
+        @else
+            <span class="text-muted">—</span>
+        @endif
     </td>
 
     {{-- UPDATE --}}
     <td class="text-center">
-        <input type="checkbox"
-               class="form-check-input perm-update"
-               name="permissions[]"
-               value="{{ $update }}"
-               {{ $user->hasDirectPermission($update) ? 'checked' : '' }}>
+        @if($updateExists)
+            <input type="checkbox"
+                   class="form-check-input perm-update"
+                   name="permissions[]"
+                   value="{{ $update }}"
+                   {{ $user->hasDirectPermission($update) ? 'checked' : '' }}>
+        @else
+            <span class="text-muted">—</span>
+        @endif
     </td>
 
     {{-- DELETE --}}
     <td class="text-center">
-        <input type="checkbox"
-               class="form-check-input perm-delete"
-               name="permissions[]"
-               value="{{ $delete }}"
-               {{ $user->hasDirectPermission($delete) ? 'checked' : '' }}>
+        @if($deleteExists)
+            <input type="checkbox"
+                   class="form-check-input perm-delete"
+                   name="permissions[]"
+                   value="{{ $delete }}"
+                   {{ $user->hasDirectPermission($delete) ? 'checked' : '' }}>
+        @else
+            <span class="text-muted">—</span>
+        @endif
     </td>
 
     {{-- DENY --}}
     <td class="text-center">
-        <input type="checkbox"
-               class="form-check-input perm-deny"
-               name="denied[]"
-               value="{{ $view }}"
-               {{ $user->isPermissionDenied($view) ? 'checked' : '' }}>
+        @if($viewExists)
+            <input type="checkbox"
+                   class="form-check-input perm-deny"
+                   name="denied[]"
+                   value="{{ $view }}"
+                   {{ $user->isPermissionDenied($view) ? 'checked' : '' }}>
+        @else
+            <span class="text-muted">—</span>
+        @endif
     </td>
 </tr>
 @endforeach
@@ -198,6 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const update = row.querySelector('.perm-update');
         const del    = row.querySelector('.perm-delete');
         const deny   = row.querySelector('.perm-deny');
+
+        if (!view || !create || !update || !del || !deny) {
+            return;
+        }
 
         // DENY overrides everything
         if (deny.checked) {

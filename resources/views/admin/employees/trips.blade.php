@@ -37,20 +37,32 @@ Transport History
             <form method="GET" class="row g-3">
 
                 <div class="col-md-4">
-                    <label class="form-label">From</label>
-                    <input type="date" name="from"
+                    <label class="form-label">Route</label>
+                    <select name="route_id" class="form-select">
+                        <option value="">All Routes</option>
+                        @foreach($routeOptions as $route)
+                            <option value="{{ $route->id }}" @selected((string) request('route_id') === (string) $route->id)>
+                                {{ $route->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">From (Date & Time)</label>
+                    <input type="datetime-local" name="from"
                            value="{{ request('from') }}"
                            class="form-control">
                 </div>
 
-                <div class="col-md-4">
-                    <label class="form-label">To</label>
-                    <input type="date" name="to"
+                <div class="col-md-3">
+                    <label class="form-label">To (Date & Time)</label>
+                    <input type="datetime-local" name="to"
                            value="{{ request('to') }}"
                            class="form-control">
                 </div>
 
-                <div class="col-md-4 d-flex align-items-end">
+                <div class="col-md-2 d-flex align-items-end">
                     <button class="btn btn-primary me-2">Filter</button>
                     <a href="{{ route('admin.employees.trips', $employee->id) }}"
                        class="btn btn-secondary">Reset</a>
@@ -78,20 +90,26 @@ Transport History
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($trips as $row)
+                    @forelse($trips as $trip)
                         @php
-                            $trip = \App\Models\Trip::find($row->trip_id);
+                            $checkinAt = $trip->checkin_time
+                                ? \Illuminate\Support\Carbon::parse($trip->checkin_time)->timezone('Asia/Manila')
+                                : null;
+                            $checkoutAt = $trip->checkout_time
+                                ? \Illuminate\Support\Carbon::parse($trip->checkout_time)->timezone('Asia/Manila')
+                                : null;
+                            $tripDate = $checkinAt ?? $checkoutAt ?? $trip->trip_date;
                         @endphp
                         <tr>
-                            <td>{{ optional($row->checkin_time)->format('M d, Y') }}</td>
+                            <td>{{ $tripDate ? $tripDate->format('M d, Y') : '—' }}</td>
                             <td>{{ optional($trip->assignment->route)->name ?? '—' }}</td>
-                            <td>{{ ucfirst($trip->direction) }}</td>
-                            <td>{{ optional($row->checkin_time)->format('H:i') ?? '—' }}</td>
-                            <td>{{ optional($row->checkout_time)->format('H:i') ?? '—' }}</td>
+                            <td>{{ ucfirst($trip->direction ?? 'unknown') }}</td>
+                            <td>{{ $checkinAt ? $checkinAt->format('h:i A') : '—' }}</td>
+                            <td>{{ $checkoutAt ? $checkoutAt->format('h:i A') : '—' }}</td>
                             <td>{{ optional($trip->assignment->driver->user)->full_name ?? '—' }}</td>
                             <td>{{ optional($trip->assignment->bus)->plate_number ?? '—' }}</td>
                             <td>
-                                @if($row->checkin_time && $row->checkout_time)
+                                @if($checkinAt && $checkoutAt)
                                     <span class="badge bg-success">Complete</span>
                                 @else
                                     <span class="badge bg-warning">Incomplete</span>

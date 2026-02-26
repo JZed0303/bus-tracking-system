@@ -27,6 +27,35 @@
         .filepond--image-preview-wrapper img { border-radius: 50%; object-fit: cover; }
 
         .filepond--panel-root { border: 1px solid rgba(0,0,0,.15); background: #f8f9fa; }
+
+        .driver-cell {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            min-width: 220px;
+        }
+
+        .driver-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #e9edf4;
+            background: #f8fafc;
+            flex-shrink: 0;
+        }
+
+        .driver-actions .btn {
+            border-radius: 0 !important;
+        }
+        .driver-actions .btn:first-child {
+            border-top-left-radius: .25rem !important;
+            border-bottom-left-radius: .25rem !important;
+        }
+        .driver-actions .btn:last-child {
+            border-top-right-radius: .25rem !important;
+            border-bottom-right-radius: .25rem !important;
+        }
     </style>
 @endsection
 
@@ -95,14 +124,14 @@
                 </div>
             </div>
 
-            <table id="drivers-table" class="table table-bordered table-striped dt-responsive nowrap" style="width:100%">
+            <table id="drivers-table" class="table table-bordered table-striped dt-responsive nowrap align-middle w-100">
                 <thead>
                     <tr>
                         <th>Driver</th>
                         <th>Company</th>
                         <th>Bus</th>
                         <th>Route</th>
-                        <th>Status</th>
+                        <th class="text-center">Status</th>
                        
                         <th width="190">Actions</th>
                     </tr>
@@ -128,10 +157,19 @@
 
                         <tr>
                             <td>
-                                <strong>{{ $driver->user->full_name }}</strong><br>
-                                <small class="text-muted">
-                                    License: {{ $driver->license_number ?? '—' }}
-                                </small>
+                                <div class="driver-cell">
+                                    <img
+                                        src="{{ $driver->photo_url ?? asset('build/images/user-placeholder.png') }}"
+                                        alt="{{ $driver->user->full_name }} profile"
+                                        class="driver-avatar"
+                                    >
+                                    <div>
+                                        <strong>{{ $driver->user->full_name }}</strong><br>
+                                        <small class="text-muted">
+                                            License: {{ $driver->license_number ?? '—' }}
+                                        </small>
+                                    </div>
+                                </div>
                             </td>
 
                             <td>{{ $driver->company->name ?? '—' }}</td>
@@ -140,7 +178,7 @@
 
                             <td>{{ optional($driver->currentAssignment?->route)->name ?? 'Unassigned' }}</td>
 
-                            <td>
+                            <td class="text-center">
                                 <span class="badge bg-{{ $driver->status === 'active' ? 'success' : 'secondary' }}">
                                     {{ ucfirst($driver->status) }}
                                 </span>
@@ -148,8 +186,14 @@
 
                            
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('admin.drivers.show', $driver) }}" class="btn btn-info">Profile</a>
+                                <div class="btn-group btn-group-sm driver-actions">
+                                    <a href="{{ route('admin.drivers.show', $driver) }}"
+                                       class="btn btn-info"
+                                       data-bs-toggle="tooltip"
+                                       title="View Profile"
+                                       aria-label="View Profile">
+                                        <i class="mdi mdi-account-circle-outline"></i>
+                                    </a>
 
                                     {{-- EDIT (no onclick; jQuery will handle) --}}
                                    
@@ -198,9 +242,11 @@
             pageLength: 10,
             order: [[0, 'asc']],
             columnDefs: [
-                { targets: [6], orderable: false }
+                { targets: [5], orderable: false, searchable: false } // actions
             ],
         });
+
+        $('[data-bs-toggle="tooltip"]').tooltip();
 
         // Bootstrap validation (Create + Edit forms)
         $(document).on('submit', '.needs-validation', function (e) {

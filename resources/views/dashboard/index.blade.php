@@ -2,6 +2,9 @@
 
 @section('title', 'Company Dashboard')
 @section('page-title', 'Company Dashboard')
+@section('css')
+
+@endsection
 
 @section('body')
 <body data-sidebar="colored">
@@ -19,41 +22,40 @@
                     'label' => 'Total Employees',
                     'value' => 420,
                     'icon'  => 'mdi-account-group',
-                    'color' => 'primary'
+                    'meta'  => '0 inactive',
                 ],
                 [
                     'label' => 'Employees Transported Today',
                     'value' => 318,
                     'icon'  => 'mdi-account-check',
-                    'color' => 'success'
+                    'meta'  => '0% workforce coverage',
                 ],
                 [
                     'label' => 'Assigned Buses',
                     'value' => 14,
                     'icon'  => 'mdi-bus',
-                    'color' => 'info'
+                    'meta'  => 'Company network in service',
                 ],
                 [
                     'label' => 'Active Routes',
                     'value' => 9,
                     'icon'  => 'mdi-map-marker-path',
-                    'color' => 'warning'
+                    'meta'  => 'Routes currently available',
                 ],
             ];
         @endphp
 
         @foreach($kpis as $kpi)
             <div class="col-xl-3 col-md-6">
-                <div class="card h-100">
-                    <div class="card-body d-flex justify-content-between align-items-center">
+                <div class="card hm-kpi-card h-100">
+                    <div class="card-body d-flex justify-content-between align-items-start">
                         <div>
-                            <small class="text-muted">{{ $kpi['label'] }}</small>
-                            <h3 class="mb-0">{{ number_format($kpi['value']) }}</h3>
+                            <p class="hm-kpi-label">{{ $kpi['label'] }}</p>
+                            <h3 class="hm-kpi-value">{{ number_format($kpi['value']) }}</h3>
+                            <p class="hm-kpi-meta">{{ $kpi['meta'] }}</p>
                         </div>
-                        <div class="avatar-sm">
-                            <span class="avatar-title bg-{{ $kpi['color'] }} rounded-circle">
-                                <i class="mdi {{ $kpi['icon'] }} font-size-20"></i>
-                            </span>
+                        <div class="hm-kpi-icon">
+                            <i class="mdi {{ $kpi['icon'] }}"></i>
                         </div>
                     </div>
                 </div>

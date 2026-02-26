@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 // ✅ Spatie
 use Spatie\Permission\Models\Role;
@@ -137,7 +138,9 @@ class CompanyController extends Controller
      */
     public function edit(Company $company)
     {
-        return view('admin.companies.edit', compact('company'));
+        $companyAdmin = $this->resolveCompanyAdmin($company);
+
+        return view('admin.companies.edit', compact('company', 'companyAdmin'));
     }
 
     /**
@@ -147,6 +150,9 @@ class CompanyController extends Controller
 
 public function update(Request $request, Company $company)
 {
+    $companyAdmin = $this->resolveCompanyAdmin($company);
+    $companyAdminId = $companyAdmin?->id;
+
     $validated = $request->validate([
         'name'           => ['required', 'string', 'max:255', 'unique:companies,name,' . $company->id],
         'address'        => ['nullable', 'string', 'max:500'],
@@ -154,9 +160,11 @@ public function update(Request $request, Company $company)
         'contact_number' => ['required', 'string', 'max:50'],
         'status'         => ['required', 'in:active,inactive'],
         'logo'           => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'admin_email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($companyAdminId)],
+        'admin_password' => [Rule::requiredIf(!$companyAdminId), 'nullable', 'string', 'min:8'],
     ]);
 
-    DB::transaction(function () use ($request, $company, $validated) {
+    DB::transaction(function () use ($request, $company, $validated, $companyAdmin) {
         if ($request->hasFile('logo')) {
             // 1) Store new logo
             $newLogoPath = $request->file('logo')->store('company-logos', 'public');
@@ -171,7 +179,41 @@ public function update(Request $request, Company $company)
         // 4) Update DB row
         $company->update($validated);
 
-        
+        // 5) Update the COMPANY ADMIN user for this company
+        $adminUser = $companyAdmin;
+
+        if (!$adminUser) {
+            [$firstName, $lastName] = $this->splitName($validated['contact_person'] ?? 'Company Admin');
+
+            $adminUser = User::create([
+                'first_name' => $firstName,
+                'last_name'  => $lastName ?: 'Admin',
+                'email'      => $validated['admin_email'],
+                'password'   => Hash::make($validated['admin_password']),
+                'role'       => 'company_admin',
+                'status'     => 'active',
+                'company_id' => $company->id,
+            ]);
+
+            $companyAdminRole = Role::firstOrCreate([
+                'name'       => 'company_admin',
+                'guard_name' => 'web',
+            ]);
+
+            $adminUser->syncRoles([$companyAdminRole->name]);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } else {
+            $adminData = [
+                'email'      => $validated['admin_email'],
+                'company_id' => $company->id,
+            ];
+
+            if (!empty($validated['admin_password'])) {
+                $adminData['password'] = Hash::make($validated['admin_password']);
+            }
+
+            $adminUser->update($adminData);
+        }
     });
 
     return redirect()
@@ -222,5 +264,19 @@ public function update(Request $request, Company $company)
         $last  = trim(implode(' ', $parts));
 
         return [$first, $last];
+    }
+
+    private function resolveCompanyAdmin(Company $company): ?User
+    {
+        return User::query()
+            ->where('company_id', $company->id)
+            ->where(function ($q) {
+                $q->where('role', 'company_admin')
+                  ->orWhereHas('roles', function ($r) {
+                      $r->where('name', 'company_admin');
+                  });
+            })
+            ->orderBy('id')
+            ->first();
     }
 }

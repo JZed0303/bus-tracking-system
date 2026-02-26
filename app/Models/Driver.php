@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Storage;
 
 class Driver extends Model
 {
@@ -24,8 +23,8 @@ class Driver extends Model
     public function getPhotoUrlAttribute(): string
     {
         if (!empty($this->photo_path)) {
-            // Use the public disk (matches ->store('drivers', 'public') in your controller)
-            return Storage::disk('public')->url($this->photo_path);
+            // Build URL from current app host (avoids localhost/bus.local mismatch).
+            return asset('storage/' . ltrim($this->photo_path, '/'));
         }
 
         return asset('build/images/user-placeholder.png');

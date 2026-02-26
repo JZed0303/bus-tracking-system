@@ -27,24 +27,25 @@
             <button type="button" class="btn btn-sm px-3 font-size-24 header-item waves-effect vertical-menu-btn" id="vertical-menu-btn">
                 <i class="ri-menu-2-line align-middle"></i>
             </button>
-
-          <!-- start page title -->
-          <div class="page-title-box align-self-center d-none d-md-block">
-            {{-- <h4 class="page-title mb-0">@yield('page-title')</h4> --}}
-          </div>
-          <!-- end page title -->
+            @php
+                $segments = request()->segments();
+                $breadcrumbText = collect($segments)
+                    ->map(fn ($segment) => ucwords(str_replace(['-', '_'], ' ', $segment)))
+                    ->implode(' / ');
+            @endphp
+            <div class="page-title-box align-self-center ms-2">
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-3 mt-4 flex-wrap">
+                    <div>
+                        <h4 class="card-title mb-1">@yield('title')</h4>
+                        <p class="text-muted mb-0">{{ $breadcrumbText !== '' ? $breadcrumbText : 'Home' }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="d-flex">
 
-             <!-- App Search-->
-             <form class="app-search d-none d-lg-block">
-                <div class="position-relative">
-                    <input type="text" class="form-control" placeholder="Search...">
-                    <span class="ri-search-line"></span>
-                </div>
-            </form>
-
+        
             <div class="dropdown d-inline-block d-lg-none ms-2">
                 <button type="button" class="btn header-item noti-icon waves-effect" id="page-header-search-dropdown"
                     data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

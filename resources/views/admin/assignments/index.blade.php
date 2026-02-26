@@ -126,10 +126,10 @@
                    class="table table-bordered table-striped dt-responsive nowrap align-middle w-100">
                 <thead class="table-light">
                 <tr>
-                    <th>Driver</th>
-                    <th>Bus</th>
                     <th>Route</th>
                     <th>Company</th>
+                    <th>Driver</th>
+                    <th>Bus</th>
                     <th>Effective Period</th>
                     <th>Status</th>
                     <th width="160" class="text-center">Actions</th>
@@ -139,18 +139,6 @@
                 <tbody>
                 @forelse($assignments as $assignment)
                     <tr>
-                        {{-- DRIVER --}}
-                        <td>
-                            <div class="fw-semibold">{{ $assignment->driver->user->full_name }}</div>
-                            <small class="text-muted">Driver ID: {{ $assignment->driver_id }}</small>
-                        </td>
-
-                        {{-- BUS --}}
-                        <td>
-                            <div class="fw-semibold">{{ $assignment->bus->plate_number }}</div>
-                            <small class="text-muted">Bus ID: {{ $assignment->bus_id }}</small>
-                        </td>
-
                         {{-- ROUTE --}}
                         <td>
                             <div class="fw-semibold">{{ $assignment->route->name }}</div>
@@ -161,6 +149,18 @@
                         <td>
                             <div class="fw-semibold">{{ $assignment->company->name }}</div>
                             <small class="text-muted">Company ID: {{ $assignment->company_id }}</small>
+                        </td>
+
+                        {{-- DRIVER --}}
+                        <td>
+                            <div class="fw-semibold">{{ $assignment->driver->user->full_name }}</div>
+                            <small class="text-muted">Driver ID: {{ $assignment->driver_id }}</small>
+                        </td>
+
+                        {{-- BUS --}}
+                        <td>
+                            <div class="fw-semibold">{{ $assignment->bus->plate_number }}</div>
+                            <small class="text-muted">Bus ID: {{ $assignment->bus_id }}</small>
                         </td>
 
                         {{-- EFFECTIVE PERIOD --}}

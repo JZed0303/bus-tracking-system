@@ -23,8 +23,10 @@ use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\UserPermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ActiveBusPageController;
+use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\ModuleController;
 
 // Chat (admin + company reuse)
 use App\Http\Controllers\Admin\ChatController;
@@ -34,6 +36,7 @@ use App\Http\Controllers\Admin\GroupChatController;
 // Company Controllers
 use App\Http\Controllers\Company\DashboardController as CompanyDashboardController;
 use App\Http\Controllers\Company\EmployeeController as CompanyEmployeeController;
+use App\Http\Controllers\Company\DriverController as CompanyDriverController;
 use App\Http\Controllers\Company\TripController as CompanyTripController;
 use App\Http\Controllers\Company\ReportController as CompanyReportController;
 use App\Http\Controllers\Company\NotificationController as CompanyNotificationController;
@@ -41,6 +44,7 @@ use App\Http\Controllers\Company\ProfileController as CompanyProfileController;
 use App\Http\Controllers\Company\EmployeeQrController as CompanyEmployeeQrController;
 use App\Http\Controllers\Company\EmployeeScheduleController;
 use App\Http\Controllers\Company\AssignmentController as CompanyAssignmentController;
+use App\Http\Controllers\Company\BusController as CompanyBusController;
 use App\Events\ChatMessageSent;
 
 Auth::routes();
@@ -188,6 +192,9 @@ Route::prefix('admin')
             Route::get('{trip}/gps-playback', [TripController::class, 'gpsPlayback'])->name('gps-playback');
         });
 
+        // Calendar module
+        Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+
         // Live map page (ADMIN: super_admin)
         Route::get('/live-map', [LiveMapPageController::class, 'index'])->name('live-map');
 
@@ -213,16 +220,58 @@ Route::prefix('company')
             ->name('dashboard');
 
         // Employees (company view)
-        Route::resource('employees', CompanyEmployeeController::class)
-            ->only(['index', 'show', 'store', 'update', 'create', 'edit']);
+        Route::prefix('employees')->name('employees.')->group(function () {
+            Route::get('/', [CompanyEmployeeController::class, 'index'])
+                ->middleware('can:view_employees')
+                ->name('index');
+            Route::get('/create', [CompanyEmployeeController::class, 'create'])
+                ->middleware('can:create_employees')
+                ->name('create');
+            Route::post('/', [CompanyEmployeeController::class, 'store'])
+                ->middleware('can:create_employees')
+                ->name('store');
+            Route::get('/{employee}', [CompanyEmployeeController::class, 'show'])
+                ->middleware('can:view_employees')
+                ->name('show');
+            Route::get('/{employee}/edit', [CompanyEmployeeController::class, 'edit'])
+                ->middleware('can:update_employees')
+                ->name('edit');
+            Route::put('/{employee}', [CompanyEmployeeController::class, 'update'])
+                ->middleware('can:update_employees')
+                ->name('update');
+        });
+
+        // Drivers (company view: assigned drivers only)
+        Route::get('drivers', [CompanyDriverController::class, 'index'])
+            ->middleware('can:view_drivers')
+            ->name('drivers.index');
+
+        // Buses (company view)
+        Route::prefix('buses')->name('buses.')->group(function () {
+            Route::get('/', [CompanyBusController::class, 'index'])
+                ->middleware('can:view_buses')
+                ->name('index');
+            Route::post('/', [CompanyBusController::class, 'store'])
+                ->middleware('can:create_buses')
+                ->name('store');
+            Route::put('{bus}', [CompanyBusController::class, 'update'])
+                ->middleware('can:update_buses')
+                ->name('update');
+            Route::get('{bus}/json', [CompanyBusController::class, 'json'])
+                ->middleware('can:view_buses')
+                ->name('json');
+        });
 
         Route::get('employees/{employee}/qr', [CompanyEmployeeQrController::class, 'show'])
+            ->middleware('can:view_employees')
             ->name('employees.qr');
 
         Route::post('employees/{employee}/qr', [CompanyEmployeeQrController::class, 'generate'])
+            ->middleware('can:update_employees')
             ->name('employees.qr.generate');
 
         Route::get('employees/{employee}/attendance', [EmployeeAttendanceController::class, 'index'])
+            ->middleware('can:view_employees')
             ->name('employees.attendance');
 
 
@@ -234,6 +283,9 @@ Route::prefix('company')
             Route::get('{trip}', [CompanyTripController::class, 'show'])->name('show');
             Route::get('{trip}/gps-playback', [CompanyTripController::class, 'gpsPlayback'])->name('gps-playback');
         });
+
+        // Calendar module (company scope)
+        Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
 
 
@@ -410,6 +462,13 @@ Route::middleware(['auth', 'can:manage_roles'])
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
         Route::get('roles/{role}/permissions', [RolePermissionController::class, 'edit'])->name('roles.permissions.edit');
         Route::post('roles/{role}/permissions', [RolePermissionController::class, 'update'])->name('roles.permissions.update');
+
+        Route::prefix('modules')->name('modules.')->middleware('role:super_admin|admin')->group(function () {
+            Route::get('/', [ModuleController::class, 'index'])->name('index');
+            Route::post('/', [ModuleController::class, 'store'])->name('store');
+            Route::put('{module}', [ModuleController::class, 'update'])->name('update');
+            Route::delete('{module}', [ModuleController::class, 'destroy'])->name('destroy');
+        });
     });
 
 /*

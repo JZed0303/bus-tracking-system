@@ -106,6 +106,47 @@
         font-size: 12px;
         line-height: 1.2;
     }
+
+    .employee-list-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e9edf4;
+        flex-shrink: 0;
+    }
+
+    .employee-card {
+        border: 1px solid #e9ecef;
+        box-shadow: 0 0.125rem 0.5rem rgba(22, 28, 45, .04);
+    }
+
+    .employee-actions {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .employee-actions .btn {
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 0 !important;
+    }
+    .employee-actions .btn:first-child {
+        border-top-left-radius: .25rem !important;
+        border-bottom-left-radius: .25rem !important;
+    }
+    .employee-actions .btn:last-child {
+        border-top-right-radius: .25rem !important;
+        border-bottom-right-radius: .25rem !important;
+    }
+
+    .employees-table td {
+        vertical-align: middle;
+    }
 </style>
 
 
@@ -119,7 +160,7 @@
 
 
             <!-- FILTERS -->
-            <div class="card mb-3">
+            <div class="card employee-card mb-3">
                 <div class="card-body">
                     <form method="GET" class="row g-3">
 
@@ -151,7 +192,7 @@
                             </select>
                         </div>
 
-                        <div class="col-12 text-end">
+                        <div class="col-12 text-end d-flex justify-content-end gap-2">
                             <button class="btn btn-primary">Apply Filters</button>
                             <a href="{{ route('admin.employees.index') }}" class="btn btn-light">Reset</a>
                         </div>
@@ -161,29 +202,23 @@
             </div>
 
             <!-- EMPLOYEE TABLE -->
-            <div class="card">
+            <div class="card employee-card">
                 <div class="card-body">
-
-
-                    <!-- Page Actions -->
-                    <div class="row mb-3">
-                        <div class="col">
-                            <h4 class="card-title mb-2">Employee List</h4>
-                            <p class="card-title-desc">
-                                View employee profiles, QR codes, attendance, and transport history.
-                            </p>
+                    <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-3">
+                        <div>
+                            <h4 class="card-title mb-1">Employee Management</h4>
+                            <p class="text-muted mb-0">View employee profiles, QR codes, attendance, and transport history.</p>
                         </div>
-                        <div class="col text-end">
+                        <div class="text-end">
                             <button type="button" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#createEmployeeModal">
                                 <i class="mdi mdi-account-plus"></i> Add Employee
                             </button>
-
                         </div>
                     </div>
 
 
-                    <table id="employees-table" class="table table-bordered table-striped dt-responsive nowrap"
+                    <table id="employees-table" class="table table-bordered table-hover dt-responsive nowrap employees-table"
                         style="width:100%">
 
                         <thead>
@@ -208,8 +243,17 @@
                                     </td>
 
                                     <td>
-                                        <strong>{{ $employee->user->full_name }}</strong><br>
-                                        <small class="text-muted">{{ $employee->employee_code }}</small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img
+                                                src="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : asset('build/images/users/avatar-2.jpg') }}"
+                                                alt="Employee Photo"
+                                                class="employee-list-avatar"
+                                            >
+                                            <div>
+                                                <strong>{{ $employee->user->full_name }}</strong><br>
+                                                <small class="text-muted">{{ $employee->employee_code }}</small>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <td>{{ $employee->company->name }}</td>
@@ -217,7 +261,14 @@
                                     <td>{{ $employee->department ?? '—' }}</td>
 
                                     <td>
-                                        <span class="badge bg-{{ $employee->status === 'active' ? 'success' : 'danger' }}">
+                                        @php
+                                            $statusClass = match($employee->status) {
+                                                'active' => 'success',
+                                                'suspended' => 'warning',
+                                                default => 'secondary',
+                                            };
+                                        @endphp
+                                        <span class="badge bg-{{ $statusClass }}">
                                             {{ ucfirst($employee->status) }}
                                         </span>
                                     </td>
@@ -235,11 +286,19 @@
                                     </td>
 
                                     <td>
-                                        <div class="btn-group btn-group-sm">
+                                        <div class="btn-group btn-group-sm employee-actions">
                                             <a href="{{ route('admin.employees.show', $employee->id) }}"
-                                                class="btn btn-info">Profile</a>
+                                                class="btn btn-info"
+                                                data-bs-toggle="tooltip"
+                                                title="View Profile"
+                                                aria-label="View Profile">
+                                                <i class="mdi mdi-account-circle-outline"></i>
+                                            </a>
 
                                           <button class="btn btn-warning btn-edit-employee"
+    data-bs-toggle="tooltip"
+    title="Edit Employee"
+    aria-label="Edit Employee"
     data-id="{{ $employee->id }}"
     data-first-name="{{ $employee->user->first_name }}"
     data-middle-name="{{ $employee->user->middle_name }}"
@@ -250,12 +309,17 @@
     data-department="{{ $employee->department }}"
     data-status="{{ $employee->status }}"
     data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
-    Edit
+    <i class="mdi mdi-pencil-outline"></i>
 </button>
 
 
                                             <a href="{{ route('admin.employees.qr', $employee->id) }}"
-                                                class="btn btn-secondary">QR</a>
+                                                class="btn btn-secondary"
+                                                data-bs-toggle="tooltip"
+                                                title="View QR"
+                                                aria-label="View QR">
+                                                <i class="mdi mdi-qrcode"></i>
+                                            </a>
                                         </div>
 
                                     </td>
@@ -296,14 +360,20 @@
                 $('#employees-table').DataTable({
                     responsive: true,
                     pageLength: 10,
+                    stateSave: true,
                     order: [
                         [1, 'asc']
+                    ],
+                    columnDefs: [
+                        { targets: [0, 6], orderable: false }
                     ]
                 });
 
                 $('#select-all').on('change', function() {
                     $('.row-checkbox').prop('checked', this.checked);
                 });
+
+                $('[data-bs-toggle="tooltip"]').tooltip();
 
                 // FilePond plugins
                 FilePond.registerPlugin(
