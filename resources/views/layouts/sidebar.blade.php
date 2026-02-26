@@ -361,9 +361,7 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                         </ul>
                     </li>
                 @endif
-<<<<<<< HEAD
                 {{-- ================= ADMINISTRATIONS ================= --}}
-=======
 
                 {{-- ================= DYNAMIC MODULES ================= --}}
                 @php
@@ -559,7 +557,6 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                 @endif
 
                 {{-- ================= ADMINISTRATION ================= --}}
->>>>>>> origin/IBTS-v1
 @can('manage_roles')
     <li class="menu-title">Administrations</li>
 <li>
@@ -576,7 +573,6 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
             <span>Roles & Permissions</span>
         </a>
     </li>
-<<<<<<< HEAD
 
     @php($isAuditTrailRoute = request()->routeIs('admin.audit-trail.*'))
     <li class="{{ $isAuditTrailRoute ? 'mm-active' : '' }}">
@@ -585,7 +581,6 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
             <span>Audit Trail</span>
         </a>
     </li>
-=======
     @if (auth()->user()->isAdminUser())
         <li>
             <a href="{{ route('admin.modules.index') }}">
@@ -594,7 +589,6 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
             </a>
         </li>
     @endif
->>>>>>> origin/IBTS-v1
 @endcan
 
 

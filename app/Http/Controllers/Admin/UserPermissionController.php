@@ -156,7 +156,6 @@ class UserPermissionController extends Controller
         }
     }
 
-<<<<<<< HEAD
     $newPermissions = $user->permissions()->pluck('name')->sort()->values()->all();
     $newDeniedPermissions = $user->deniedPermissions()->pluck('permission')->sort()->values()->all();
 
@@ -173,9 +172,7 @@ class UserPermissionController extends Controller
         ],
         tags: 'permissions'
     );
-=======
     app(PermissionRegistrar::class)->forgetCachedPermissions();
->>>>>>> origin/IBTS-v1
 
     return back()->with('success', 'User permissions updated.');
 }

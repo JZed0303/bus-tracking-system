@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-<<<<<<< HEAD
 use App\Support\AuditTrail;
-=======
 use App\Models\Module;
->>>>>>> origin/IBTS-v1
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\PermissionRegistrar;
@@ -105,7 +102,6 @@ $specialPermissions = Permission::whereIn('name', [
 
     if ($role->name === 'super_admin') {
         $role->syncPermissions(Permission::all());
-<<<<<<< HEAD
 
         $newPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
         AuditTrail::log(
@@ -116,9 +112,7 @@ $specialPermissions = Permission::whereIn('name', [
             tags: 'permissions'
         );
 
-=======
         app(PermissionRegistrar::class)->forgetCachedPermissions();
->>>>>>> origin/IBTS-v1
         return back()->with('success', 'Super Admin always has full access.');
     }
 
@@ -126,7 +120,6 @@ $specialPermissions = Permission::whereIn('name', [
 
     // Sync only selected permissions
     $role->syncPermissions($permissions);
-<<<<<<< HEAD
     $newPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
 
     AuditTrail::log(
@@ -136,9 +129,7 @@ $specialPermissions = Permission::whereIn('name', [
         newValues: ['permissions' => $newPermissions],
         tags: 'permissions'
     );
-=======
     app(PermissionRegistrar::class)->forgetCachedPermissions();
->>>>>>> origin/IBTS-v1
 
     return back()->with('success', 'Role permissions updated successfully.');
 }

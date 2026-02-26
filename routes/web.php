@@ -27,11 +27,11 @@ use App\Http\Controllers\Admin\ActiveBusPageController;
 use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RolePermissionController;
-<<<<<<< HEAD
+
 use App\Http\Controllers\Admin\AuditTrailController;
-=======
+
 use App\Http\Controllers\Admin\ModuleController;
->>>>>>> origin/IBTS-v1
+
 
 // Chat (admin + company reuse)
 use App\Http\Controllers\Admin\ChatController;
