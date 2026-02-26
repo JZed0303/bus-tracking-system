@@ -29,6 +29,8 @@
         gap: .55rem;
         font-size: .87rem;
         color: #5a6270;
+    }select#calendar-route-filter,select#calendar-driver-filter,select#calendar-status-filter{
+        padding:12px;
     }
 
     .legend-dot {

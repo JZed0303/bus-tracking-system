@@ -249,17 +249,17 @@ public function allowPermission(string $permission): void
  */
 public function can($ability, $arguments = []): bool
 {
-    // 🔴 1. Explicit user-level DENY always wins
-    if ($this->isPermissionDenied($ability)) {
-        return false;
-    }
-
-    // 🟢 2. Super admin bypass
+    // Super admin always has access.
     if ($this->hasRole('super_admin')) {
         return true;
     }
 
-    // 🟡 3. Fallback to Spatie role/permission logic
+    // Explicit user-level deny applies to non-super-admin users.
+    if ($this->isPermissionDenied($ability)) {
+        return false;
+    }
+
+    // Fallback to Spatie role/permission logic.
     return parent::can($ability, $arguments);
 }
 

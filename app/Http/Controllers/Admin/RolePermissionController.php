@@ -14,6 +14,11 @@ class RolePermissionController extends Controller
 {
 public function edit(Role $role)
 {
+    if ($role->name === 'super_admin') {
+        $role->syncPermissions(Permission::pluck('name')->toArray());
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
     $uiModules = collect(config('permission.ui.modules'));
     $dynamicModules = collect();
     $allPermissions = Permission::pluck('name')->toArray();

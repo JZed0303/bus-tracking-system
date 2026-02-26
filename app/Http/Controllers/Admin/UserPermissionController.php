@@ -117,9 +117,20 @@ class UserPermissionController extends Controller
 
   public function update(Request $request, User $user)
 {
+    $allPermissions = Permission::pluck('name')->toArray();
+
+    // Super admin users must always have full access with no denies.
+    if ($user->hasRole('super_admin') || $user->role === 'super_admin') {
+        $user->syncPermissions($allPermissions);
+        $user->deniedPermissions()->delete();
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return back()->with('success', 'Super Admin always has full access.');
+    }
+
     $selected = array_values(array_unique($request->input('permissions', [])));
     $denied = array_values(array_unique($request->input('denied', [])));
-    $allPermissions = Permission::pluck('name')->toArray();
 
     // Keep only valid permission names
     $selected = array_values(array_intersect($selected, $allPermissions));

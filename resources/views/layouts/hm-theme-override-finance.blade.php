@@ -112,7 +112,7 @@ body[data-sidebar=colored].vertical-collpsed .vertical-menu #sidebar-menu ul li 
   width:90%!important;
 }
 .sidebar-user-box.mm-active{
-  background:#134a92;
+  background:#003478;
 }
 .sidebar-user-box{
   background:#052e65;
