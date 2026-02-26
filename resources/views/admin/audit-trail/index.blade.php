@@ -24,12 +24,12 @@
                     <table id="audit-trail-table" class="table table-striped table-bordered align-middle mb-0 nowrap" style="width: 100%;">
                         <thead>
                             <tr>
-                                <th style="min-width: 180px;">User</th>
-                                <th style="min-width: 130px;">Event</th>
-                                <th style="min-width: 180px;">Model / Module</th>
-                                <th style="min-width: 300px;">Old Value</th>
-                                <th style="min-width: 300px;">New Value</th>
-                                <th style="min-width: 180px;">Date & Time</th>
+                                <th style="min-width: 50px;">User</th>
+                                <th style="min-width: 100px;">Event</th>
+                                <th style="min-width: 30px;">Module</th>
+                                <th style="min-width: 200px;">Old Value</th>
+                                <th style="min-width: 200px;">New Value</th>
+                                <th style="min-width: 130px;">Date & Time</th>
                             </tr>
                         </thead>
                         <tbody>
