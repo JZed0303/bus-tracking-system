@@ -36,7 +36,7 @@
     </script>
 
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ URL::asset('build/images/logo-header.ico') }}">
+    <link rel="shortcut icon" href="{{ URL::asset('public/images/logo-header.ico') }}">
 
     {{-- Vite (React + assets) --}}
     @viteReactRefresh
