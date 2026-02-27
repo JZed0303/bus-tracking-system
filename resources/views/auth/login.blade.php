@@ -45,11 +45,21 @@
 
                                                         <div class="mb-3">
                                                             <label class="form-label" for="password-input">Password</label>
-                                                            <input type="password"
-                                                                class="form-control @error('password') is-invalid @enderror"
-                                                                placeholder="Enter password" id="password-input"
-                                                                name="password" required autocomplete="current-password"
-                                                                value="12345678">
+                                                            <div class="position-relative">
+                                                                <input type="password"
+                                                                    class="form-control pe-5 @error('password') is-invalid @enderror"
+                                                                    placeholder="Enter password" id="password-input"
+                                                                    name="password" required autocomplete="current-password"
+                                                                    value="12345678">
+                                                                <button type="button"
+                                                                    class="btn border-0 bg-transparent position-absolute top-50 end-0 translate-middle-y me-3 p-0"
+                                                                    style="line-height: 1; z-index: 5;"
+                                                                    id="toggle-password-btn"
+                                                                    aria-label="Show password">
+                                                                    <i id="toggle-password-icon" class="mdi mdi-eye-outline"
+                                                                        aria-hidden="true"></i>
+                                                                </button>
+                                                            </div>
                                                             @error('password')
                                                                 <span class="invalid-feedback" role="alert">
                                                                     <strong>{{ $message }}</strong>
@@ -105,4 +115,25 @@
 @section('scripts')
     <!-- App js -->
     <script src="{{ URL::asset('build/js/app.js') }}"></script>
+    <script>
+        (function() {
+            const passwordInput = document.getElementById('password-input');
+            const toggleButton = document.getElementById('toggle-password-btn');
+            const toggleIcon = document.getElementById('toggle-password-icon');
+
+            if (!passwordInput || !toggleButton) {
+                return;
+            }
+
+            toggleButton.addEventListener('click', function() {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+                toggleButton.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+
+                if (toggleIcon) {
+                    toggleIcon.className = isPassword ? 'mdi mdi-eye-off-outline' : 'mdi mdi-eye-outline';
+                }
+            });
+        })();
+    </script>
 @endsection
