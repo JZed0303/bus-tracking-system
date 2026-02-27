@@ -13,17 +13,18 @@
            UNIFIED PALETTE (TEAL)
         ========================== */
         :root{
-            --brand-900:#064e5a;  /* darkest */
-            --brand-800:#0b6674;
-            --brand-700:#0c768a;  /* primary base */
-            --brand-600:#1293a8;
-            --brand-500:#19a9bf;
-            --brand-400:#32bad4;
-            --brand-100: rgba(12,118,138,.10);
-            --brand-075: rgba(12,118,138,.075);
-            --brand-050: rgba(12,118,138,.05);
+            --brand-900:#38424f;  /* darkest grey */
+            --brand-800:#374151;
+            --brand-700:#4b5563;  /* primary base */
+            --brand-600:#6b7280;
+            --brand-500:#9ca3af;
+            --brand-400:#d1d5db;
+            --brand-100: rgba(75,85,99,.10);
+            --brand-075: rgba(75,85,99,.075);
+            --brand-050: rgba(75,85,99,.05);
             --text-900:#0f172a;
         }
+
 
         /* =========================
            GLOBAL
