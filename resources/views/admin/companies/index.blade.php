@@ -171,14 +171,14 @@
                         <td class="text-center">
                             <div class="btn-group btn-group-sm action-icons">
                                 <a href="{{ route('admin.companies.show', $company) }}"
-                                   class="btn btn-sm btn-primary"
+                                   class="btn btn-sm"
                                    data-bs-toggle="tooltip"
                                    title="View Company">
                                     <i class="mdi mdi-eye-outline"></i>
                                 </a>
 
                                 <a href="{{ route('admin.companies.edit', $company) }}"
-                                   class="btn btn-sm btn-warning"
+                                   class="btn btn-sm"
                                    data-bs-toggle="tooltip"
                                    title="Edit Company">
                                     <i class="mdi mdi-pencil-outline"></i>

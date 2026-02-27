@@ -188,7 +188,7 @@
                             <td>
                                 <div class="btn-group btn-group-sm driver-actions">
                                     <a href="{{ route('admin.drivers.show', $driver) }}"
-                                       class="btn btn-info"
+                                       class="btn"
                                        data-bs-toggle="tooltip"
                                        title="View Profile"
                                        aria-label="View Profile">

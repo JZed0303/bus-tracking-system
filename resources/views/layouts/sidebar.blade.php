@@ -604,8 +604,11 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                     </a>
                 </li>
 
-                <li>
-                    <a href="#">
+                @php($isProfileRoute = request()->routeIs('admin.profile.*'))
+                @php($profileUrl = auth()->user()->isSuperAdmin() ? route('admin.profile.show') : '#')
+
+                <li class="{{ $isProfileRoute ? 'mm-active' : '' }}">
+                    <a href="{{ $profileUrl }}" class="{{ $isProfileRoute ? 'active' : '' }}">
                         <i class="ri-user-fill"></i>
                         <span>Profile</span>
                     </a>

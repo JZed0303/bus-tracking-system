@@ -102,7 +102,7 @@
                             <div class="btn-group btn-group-sm">
 
                                 <!-- VIEW -->
-                                <button class="btn btn-primary btn-view-bus"
+                                <button class="btn btn-view-bus"
                                         data-id="{{ $bus->id }}"
                                         data-bs-toggle="modal"
                                         data-bs-target="#viewBusModal"
@@ -111,7 +111,7 @@
                                 </button>
 
                                 <!-- LAST LOCATION -->
-                                <button class="btn btn-info btn-view-bus-location"
+                                <button class="btn btn-view-bus-location"
                                         data-id="{{ $bus->id }}"
                                         data-plate="{{ $bus->plate_number }}"
                                         data-bs-toggle="modal"
@@ -121,7 +121,7 @@
                                 </button>
 
                                 <!-- EDIT -->
-                                <button class="btn btn-warning btn-edit-bus"
+                                <button class="btn btn-edit-bus"
                                         data-bs-toggle="modal"
                                         data-bs-target="#editBusModal{{ $bus->id }}"
                                         title="Edit Bus">

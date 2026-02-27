@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\ActiveBusPageController;
 use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 
 use App\Http\Controllers\Admin\AuditTrailController;
 
@@ -112,6 +113,11 @@ Route::prefix('admin')
 
         // Dashboard
         Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+        // Super Admin profile
+        Route::get('/profile', [AdminProfileController::class, 'show'])->name('profile.show');
+        Route::put('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [AdminProfileController::class, 'updatePassword'])->name('profile.password.update');
 
         // Schedules (reuse Company\EmployeeScheduleController)
         Route::resource('schedules', EmployeeScheduleController::class)

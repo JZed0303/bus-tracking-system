@@ -168,6 +168,7 @@ table thead th,
 table.dataTable thead th{
   background:#f1f3f5 !important;
   color:#374151 !important;
+  font-weight: bold !important;
 }
 .vertical-menu .menu-title{
   color: rgba(255,255,255,0.55) !important;

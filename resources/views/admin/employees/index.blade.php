@@ -288,33 +288,33 @@
                                     <td>
                                         <div class="btn-group btn-group-sm employee-actions">
                                             <a href="{{ route('admin.employees.show', $employee->id) }}"
-                                                class="btn btn-info"
+                                                class="btn"
                                                 data-bs-toggle="tooltip"
                                                 title="View Profile"
                                                 aria-label="View Profile">
                                                 <i class="mdi mdi-account-circle-outline"></i>
                                             </a>
 
-                                          <button class="btn btn-warning btn-edit-employee"
-    data-bs-toggle="tooltip"
-    title="Edit Employee"
-    aria-label="Edit Employee"
-    data-id="{{ $employee->id }}"
-    data-first-name="{{ $employee->user->first_name }}"
-    data-middle-name="{{ $employee->user->middle_name }}"
-    data-last-name="{{ $employee->user->last_name }}"
-    data-email="{{ $employee->user->email }}"
-    data-company-id="{{ $employee->company_id }}"
-    data-employee-code="{{ $employee->employee_code }}"
-    data-department="{{ $employee->department }}"
-    data-status="{{ $employee->status }}"
-    data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
-    <i class="mdi mdi-pencil-outline"></i>
-</button>
+                                          <button class="btn btn-edit-employee"
+                                                data-bs-toggle="tooltip"
+                                                title="Edit Employee"
+                                                aria-label="Edit Employee"
+                                                data-id="{{ $employee->id }}"
+                                                data-first-name="{{ $employee->user->first_name }}"
+                                                data-middle-name="{{ $employee->user->middle_name }}"
+                                                data-last-name="{{ $employee->user->last_name }}"
+                                                data-email="{{ $employee->user->email }}"
+                                                data-company-id="{{ $employee->company_id }}"
+                                                data-employee-code="{{ $employee->employee_code }}"
+                                                data-department="{{ $employee->department }}"
+                                                data-status="{{ $employee->status }}"
+                                                data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
+                                                <i class="mdi mdi-pencil-outline"></i>
+                                            </button>
 
 
                                             <a href="{{ route('admin.employees.qr', $employee->id) }}"
-                                                class="btn btn-secondary"
+                                                class="btn"
                                                 data-bs-toggle="tooltip"
                                                 title="View QR"
                                                 aria-label="View QR">

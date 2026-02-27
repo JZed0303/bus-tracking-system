@@ -197,7 +197,7 @@ Users
                         <div class="btn-group btn-group-sm user-actions">
 
                             <a href="{{ route('admin.users.edit', $user) }}"
-                               class="btn btn-warning"
+                               class="btn"
                                data-bs-toggle="tooltip"
                                title="Edit User">
                                 <i class="mdi mdi-pencil-outline"></i>
@@ -209,7 +209,7 @@ Users
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit"
-                                        class="btn btn-danger"
+                                        class="btn"
                                         data-bs-toggle="tooltip"
                                         title="Disable User">
                                     <i class="mdi mdi-account-off-outline"></i>

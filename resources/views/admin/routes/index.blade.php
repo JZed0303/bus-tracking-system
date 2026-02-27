@@ -173,14 +173,14 @@ Route Management
                             <td>
                                 <div class="btn-group btn-group-sm route-actions">
                                     <a href="{{ route('admin.routes.show', $route->id) }}"
-                                       class="btn btn-info btn-sm"
+                                       class="btn"
                                        data-bs-toggle="tooltip"
                                        title="View Route">
                                         <i class="mdi mdi-eye-outline"></i>
                                     </a>
 
                                     <a href="{{ route('admin.routes.edit', $route->id) }}"
-                                       class="btn btn-secondary btn-sm"
+                                       class="btn"
                                        data-bs-toggle="tooltip"
                                        title="Edit Route">
                                         <i class="mdi mdi-pencil-outline"></i>
@@ -201,7 +201,7 @@ Route Management
                                             </button>
                                         </form>
                                     @else
-                                        <button type="button" class="btn btn-danger btn-sm" disabled data-bs-toggle="tooltip" title="Cannot delete while route has active trips or assignments">
+                                        <button type="button" class="btn" disabled data-bs-toggle="tooltip" title="Cannot delete while route has active trips or assignments">
                                             <i class="mdi mdi-trash-can-outline"></i>
                                         </button>
                                     @endif
