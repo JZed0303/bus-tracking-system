@@ -49,13 +49,6 @@ html, body{
 body{
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif !important;
 }
-/* 
-a{
-  color: var(--hm-red) !important;
-} */
-a:hover{
-  color: var(--hm-orange) !important;
-}
 
 /* Subtle section title styling */
 .page-title-box .page-title,

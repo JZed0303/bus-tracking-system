@@ -25,7 +25,7 @@
         <div class="col">
             <h4 class="mb-1">
                 Manage Permissions —
-                <span class="text-primary">
+                <span>
                     {{ Str::of($role->name)->replace('_',' ')->title() }}
                 </span>
             </h4>

@@ -23,6 +23,96 @@
 
 <script>
     (function () {
+        function inferActionLabel(button) {
+            const explicitLabel = (button.getAttribute('title') || button.getAttribute('aria-label') || '').trim();
+            if (explicitLabel) {
+                return explicitLabel;
+            }
+
+            const textLabel = (button.innerText || '').replace(/\s+/g, ' ').trim();
+            if (textLabel && /[a-z0-9]/i.test(textLabel)) {
+                return textLabel;
+            }
+
+            const iconClasses = Array.from(button.querySelectorAll('i'))
+                .map(function (icon) { return icon.className.toLowerCase(); })
+                .join(' ');
+
+            if (iconClasses.includes('trash') || iconClasses.includes('delete')) {
+                return 'Delete';
+            }
+            if (iconClasses.includes('pencil') || iconClasses.includes('edit')) {
+                return 'Edit';
+            }
+            if (iconClasses.includes('timeline')) {
+                return 'Timeline';
+            }
+            if (iconClasses.includes('map-marker') || iconClasses.includes('map')) {
+                return 'View Map';
+            }
+            if (iconClasses.includes('qrcode') || iconClasses.includes('qr')) {
+                return 'View QR';
+            }
+            if (iconClasses.includes('eye') || iconClasses.includes('account')) {
+                return 'View';
+            }
+
+            return 'View details';
+        }
+
+        function inferActionType(label) {
+            const normalized = (label || '').toLowerCase();
+
+            if (/(delete|remove|disable|deactivate|trash)/.test(normalized)) {
+                return 'delete';
+            }
+            if (/(edit|update|modify|manage)/.test(normalized)) {
+                return 'edit';
+            }
+            if (/(timeline|history|trip)/.test(normalized)) {
+                return 'timeline';
+            }
+            if (/(location|map|gps|live map)/.test(normalized)) {
+                return 'map';
+            }
+            if (/(view|show|details|profile|qr|live)/.test(normalized)) {
+                return 'view';
+            }
+
+            return 'default';
+        }
+
+        function normalizeActionButtons(cell) {
+            const buttons = cell.querySelectorAll('a.btn, button.btn');
+            if (!buttons.length) {
+                return;
+            }
+
+            buttons.forEach(function (button) {
+                if (button.closest('.modal-footer')) {
+                    return;
+                }
+
+                const label = inferActionLabel(button);
+                const actionType = inferActionType(label);
+                const existingToggle = (button.getAttribute('data-bs-toggle') || '').trim();
+
+                button.classList.add('action-btn', 'action-btn--' + actionType);
+                button.setAttribute('title', label);
+                button.setAttribute('aria-label', label);
+                button.setAttribute('data-bs-placement', 'top');
+                if (!existingToggle || existingToggle === 'tooltip') {
+                    button.setAttribute('data-bs-toggle', 'tooltip');
+                }
+            });
+
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                buttons.forEach(function (button) {
+                    window.bootstrap.Tooltip.getOrCreateInstance(button);
+                });
+            }
+        }
+
         function normalizedText(cell) {
             return (cell.innerText || '')
                 .replace(/\s+/g, ' ')
@@ -86,6 +176,9 @@
                         '.btn-group, .btn-toolbar, a.btn, button.btn, form button.btn'
                     );
                     cell.classList.toggle('table-action-cell', Boolean(hasActions));
+                    if (hasActions) {
+                        normalizeActionButtons(cell);
+                    }
                 });
             });
         }

@@ -212,7 +212,7 @@
                     </select>
                 </div>
                 <div class="col-12 col-lg-2 d-flex align-items-end">
-                    <button type="button" id="calendar-clear-filters" class="btn btn-sm btn-outline-secondary w-100">
+                    <button type="button" id="calendar-clear-filters" class="btn btn-sm btn-outline-primary w-50">
                         Clear Filters
                     </button>
                 </div>
