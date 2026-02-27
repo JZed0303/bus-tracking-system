@@ -141,13 +141,24 @@ background:linear-gradient(to bottom, #b4181e 0%, #940005 48%, #660509 100%) !im
 }
 
 .vertical-collpsed .vertical-menu #sidebar-menu>ul>li:hover>ul{
-      display: block;
+    display: block;
     left: 70px;
     position: absolute;
     width: 190px;
     height: auto !important;
     box-shadow: 3px 5px 12px -4px #1213151a;
     top: 54px;
+}
+.vertical-collpsed .vertical-menu #sidebar-menu > ul > li > a {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    height: 60px; 
+}
+.vertical-collpsed .vertical-menu #sidebar-menu > ul > li > a i {
+    margin: 0 !important;
+    font-size: 20px;
 }
 
 .navbar-brand-box{
@@ -164,14 +175,7 @@ table thead th,
 table.dataTable thead th{
   background:#f1f3f5 !important;
   color:#374151 !important;
-  border-color:#080808 !important;
 }
-.table-light{
-     color: #ffffff;
-    border-color: #d03838 !important;
-    background-color: #d03838!important;
-}
-
 .vertical-menu .menu-title{
   color: rgba(255,255,255,0.55) !important;
   letter-spacing: 0.10em !important;
@@ -250,13 +254,9 @@ table.dataTable thead th{
   color: inherit !important;
   fill: currentColor;
 }
-a.btn:hover,
-a.btn:focus,
-a.btn:active,
-.btn:hover,
-.btn:focus,
-.btn:active{
-  color: inherit !important;
+.btn.active{
+  background: var(--hm-red) !important;
+  color:#E7E9EE !important;
 }
 .btn:hover i,
 .btn:focus i,
@@ -290,7 +290,7 @@ color:white!important;
 }
 
 .btn-outline-primary{
-  color: var(--hm-red) !important;
+  color: var(--hm-white) !important;
   border-color: rgba(179,32,37,0.45) !important;
 }
 .btn-outline-primary:hover{
