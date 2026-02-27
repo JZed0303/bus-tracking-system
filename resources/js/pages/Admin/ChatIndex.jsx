@@ -33,9 +33,12 @@ export default function ChatIndex() {
           </button>
         </div>
 
-        <div className="list-group">
+        <div className="list-group light-red-list-group">
           {threads.map((t) => (
-            <div key={t.id} className="list-group-item d-flex justify-content-between align-items-center">
+            <div
+              key={t.id}
+              className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+            >
               <div className="me-2">
                 <div className="fw-semibold">{t.title}</div>
                 <div className="small text-muted">

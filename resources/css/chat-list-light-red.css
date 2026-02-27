@@ -1,0 +1,37 @@
+/* Shared light-red hover/active styling for chat thread lists */
+.light-red-list-group .list-group-item.list-group-item-action:hover,
+.light-red-list-group .list-group-item.list-group-item-action:focus {
+  background-color: #fde2e4;
+  color: #842029;
+}
+
+.light-red-list-group .list-group-item.list-group-item-action.active,
+.light-red-list-group .list-group-item.list-group-item-action.active:hover,
+.light-red-list-group .list-group-item.list-group-item-action.active:focus {
+  background-color: #f8d7da;
+  border-color: #f1aeb5;
+  color: #842029;
+}
+
+.light-red-list-group .list-group-item.list-group-item-action.active .small,
+.light-red-list-group .list-group-item.list-group-item-action.active .text-truncate {
+  color: #842029 !important;
+}
+
+.chat-shell .chat-list li > a:hover,
+.chat-shell .chat-list li > a:focus {
+  background-color: #fde2e4;
+}
+
+.chat-shell .chat-list li.active > a,
+.chat-shell .chat-list li.active > a:hover,
+.chat-shell .chat-list li.active > a:focus {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.chat-shell .chat-list li.active > a .text-muted,
+.chat-shell .chat-list li.active > a .text-truncate,
+.chat-shell .chat-list li.active > a p {
+  color: #842029 !important;
+}

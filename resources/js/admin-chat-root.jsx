@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import ChatShell from './pages/Admin/ChatShell';
 import './bootstrap';
+import '../css/chat-list-light-red.css';
 import '../css/chat-shell.css';
 
 

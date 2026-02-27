@@ -181,7 +181,7 @@ export default function GroupChatsPage() {
               </button>
             </div>
 
-            <div className="list-group mt-3">
+            <div className="list-group mt-3 light-red-list-group">
               {threads.map((t) => (
                 <button
                   key={t.id}

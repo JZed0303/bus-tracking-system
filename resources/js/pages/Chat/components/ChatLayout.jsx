@@ -202,6 +202,20 @@ export default function ChatLayout({
                 </li>
               </ul>
             </div>
+              <style>
+                {`
+                  .nav-pills .nav-link.active {
+                    background-color: #f8d7da !important;
+                    color: #842029 !important;
+                    border-color: #f5c2c7 !important;
+                  }
+
+                  .nav-pills .nav-link:hover {
+                    background-color: #f8d7da;
+                    color: #842029;
+                  }
+                `}
+              </style>
 
             {/* Search UI (optional) */}
             <div className="py-2 mt-3">
