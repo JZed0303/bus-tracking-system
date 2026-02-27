@@ -162,9 +162,9 @@ table thead th,
 .table > :not(caption) > * > th,
 .dataTable thead th,
 table.dataTable thead th{
-  background:#da001c !important;
-  color:#ffffff !important;
-  border-color:#da001c !important;
+  background:#f1f3f5 !important;
+  color:#374151 !important;
+  border-color:#080808 !important;
 }
 .table-light{
      color: #ffffff;
@@ -378,12 +378,6 @@ color:white!important;
   border-bottom-right-radius: 12px !important;
 }
 
-.table thead th{
-  background: #da001c !important;
-  border-bottom: 1px solid #da001c !important;
-  color: #ffffff !important;
-  font-weight: 700 !important;
-}
 
 .table tbody tr{
   border-color: var(--hm-border) !important;
@@ -438,7 +432,7 @@ color:white!important;
         border: 0 !important;
         border-radius: 0px !important;
         color: #fff !important;
-        background: linear-gradient(135deg, #b32025 0%, #e85d04 65%, #f4c430 120%) !important;
+        background: linear-gradient(135deg, #b4161d 0%, #c83b41 65%, #eb5353 120%) !important;
         box-shadow: 0 10px 24px rgba(179, 32, 37, 0.28) !important;
         position: relative;
         overflow: hidden;
