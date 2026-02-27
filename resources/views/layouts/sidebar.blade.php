@@ -313,7 +313,7 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
 
                     <li>
                         <a href="javascript:void(0);" class="has-arrow">
-                            <i class="ri-settings-3-fill"></i>
+                            <i class="ri-settings-fill"></i>
                             <span>Operations</span>
                         </a>
 

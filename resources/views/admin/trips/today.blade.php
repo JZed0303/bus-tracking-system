@@ -55,7 +55,7 @@ Today’s Trips
 
             <div class="row g-2 mb-3 align-items-center">
                 <div class="col-lg-5">
-                    <div class="btn-group" role="group" aria-label="Trip direction tabs">
+                    <div class="d-flex gap-2" role="group" aria-label="Trip direction tabs">
                         <button type="button" class="btn btn-outline-primary btn-direction active" data-direction="all">
                             All
                         </button>
