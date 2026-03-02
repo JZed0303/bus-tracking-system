@@ -12,6 +12,11 @@
   --hm-red-2: #0b4aa0;      /* deeper blue for hover */
   --hm-orange: #1f7ae0;     /* accent blue */
   --hm-yellow: #7cc4ff;     /* light accent */
+  --hm-apex-1: #346bec;
+  --hm-apex-2: #1f7ae0;
+  --hm-apex-3: #7cc4ff;
+  --hm-apex-4: #0b4aa0;
+  --hm-apex-5: #6B7280;
 
   --hm-bg: #F5F8FC;
   --hm-surface: #FFFFFF;
@@ -456,4 +461,44 @@ a.btn.btn-primary.btn-sm:hover{
 .page-content{
   padding:94px 12px 60px!important;
 }
+
+.apexcharts-tooltip,
+.apexcharts-xaxistooltip,
+.apexcharts-yaxistooltip{
+  background: #fff !important;
+  border: 1px solid var(--hm-border) !important;
+  color: var(--hm-text) !important;
+}
+.apexcharts-legend-text{
+  color: var(--hm-text) !important;
+}
+.apexcharts-gridline{
+  stroke: #e4ebf4 !important;
+}
 </style>
+<script>
+  (function () {
+    function cssVar(name, fallback) {
+      var value = getComputedStyle(document.documentElement).getPropertyValue(name);
+      return (value && value.trim()) || fallback;
+    }
+
+    function applyApexThemeDefaults() {
+      var palette = [
+        cssVar('--hm-apex-1', '#346bec'),
+        cssVar('--hm-apex-2', '#1f7ae0'),
+        cssVar('--hm-apex-3', '#7cc4ff'),
+        cssVar('--hm-apex-4', '#0b4aa0'),
+        cssVar('--hm-apex-5', '#6B7280')
+      ];
+
+      window.Apex = window.Apex || {};
+      window.Apex.colors = palette;
+      window.Apex.chart = window.Apex.chart || {};
+      window.Apex.chart.foreColor = cssVar('--hm-muted', '#6B7280');
+    }
+
+    applyApexThemeDefaults();
+    window.addEventListener('DOMContentLoaded', applyApexThemeDefaults);
+  })();
+</script>

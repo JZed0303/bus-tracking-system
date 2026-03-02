@@ -2,41 +2,46 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SystemSetting;
 use App\Support\AuditTrail;
-use Illuminate\Contracts\View\View;
+use App\Support\ThemeOverride;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Contracts\View\View;
 
 class SettingsController extends Controller
 {
-    public function index(): View
+    public function themeOverride(): View
     {
-        return view('settings.index');
+        return view('settings.theme-override', [
+            'partialOptions' => ThemeOverride::getPartialOptions(),
+            'selectedPartial' => ThemeOverride::getSelectedPartial(),
+        ]);
     }
 
-    public function updatePreferences(Request $request): RedirectResponse
+    public function updateThemeOverride(Request $request): RedirectResponse
     {
+        $oldSelectedPartial = ThemeOverride::getSelectedPartial();
+
         $validated = $request->validate([
-            'theme_mode' => ['required', 'in:light,dark'],
+            'theme_override_partial' => ['required', 'in:' . implode(',', array_keys(ThemeOverride::getPartialOptions()))],
         ]);
 
-        $user = $request->user();
-        $oldThemeMode = $user?->theme_mode ?: 'light';
+        SystemSetting::updateOrCreate(
+            ['key' => ThemeOverride::PARTIAL_KEY],
+            ['value' => $validated['theme_override_partial']]
+        );
 
-        if ($user) {
-            $user->forceFill([
-                'theme_mode' => $validated['theme_mode'],
-            ])->saveQuietly();
-        }
+        ThemeOverride::clearPartialCache();
 
         AuditTrail::log(
-            event: 'settings_updated',
-            auditable: $user,
-            oldValues: ['theme_mode' => $oldThemeMode],
-            newValues: ['theme_mode' => $validated['theme_mode']],
+            event: 'settings_theme_override_updated',
+            auditable: $request->user(),
+            oldValues: ['theme_override_partial' => $oldSelectedPartial],
+            newValues: ['theme_override_partial' => $validated['theme_override_partial']],
             tags: 'settings'
         );
 
-        return back()->with('success', 'Settings updated successfully.');
+        return back()->with('success', 'Theme override file switched successfully.');
     }
 }

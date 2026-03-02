@@ -65,6 +65,15 @@
                                 </span>
                             </td>
                         </tr>
+                        <tr>
+                            <th>Assignment Leg</th>
+                            <td>
+                                @php($leg = $assignment->leg ?? 'both')
+                                <span class="badge bg-{{ $leg === 'both' ? 'dark' : ($leg === 'pickup' ? 'info' : 'primary') }}">
+                                    {{ strtoupper($leg) }}
+                                </span>
+                            </td>
+                        </tr>
                     </table>
                 </div>
             </div>
@@ -167,13 +176,13 @@
             <div class="card">
                 <div class="card-body d-flex flex-wrap gap-2">
 
-                    <a href="{{ route('admin.assignments.timeline', $assignment->id) }}"
+                    <a href="{{ route('company.assignments.timeline', $assignment->id) }}"
                        class="btn btn-outline-primary">
                         <i class="mdi mdi-timeline"></i> View Assignment Timeline
                     </a>
 
 
-                    <a href="{{ route('admin.assignments.index') }}"
+                    <a href="{{ route('company.assignments.index') }}"
                        class="btn btn-outline-secondary ms-auto">
                         Back to Assignments
                     </a>

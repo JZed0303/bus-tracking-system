@@ -151,6 +151,25 @@
                         @enderror
                     </div>
 
+                    <!-- TRIP LEG -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Assignment Leg <span class="text-danger">*</span>
+                        </label>
+                        <select name="leg"
+                                class="form-select @error('leg') is-invalid @enderror"
+                                required>
+                            @php($leg = old('leg', $assignment->leg ?? 'both'))
+                            <option value="both" @selected($leg === 'both')>Both (Pickup + Drop-off)</option>
+                            <option value="pickup" @selected($leg === 'pickup')>Pickup Only</option>
+                            <option value="dropoff" @selected($leg === 'dropoff')>Drop-off Only</option>
+                        </select>
+                        <small class="text-muted">Use this if pickup and drop-off use different buses.</small>
+                        @error('leg')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                 </div>
             </div>
 

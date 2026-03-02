@@ -132,6 +132,15 @@
                                     <th>Lifecycle State</th>
                                     <td><span class="badge bg-{{ $lifecycleColor }}">{{ $lifecycle }}</span></td>
                                 </tr>
+                                <tr>
+                                    <th>Assignment Leg</th>
+                                    <td>
+                                        @php($leg = $assignment->leg ?? 'both')
+                                        <span class="badge bg-{{ $leg === 'both' ? 'dark' : ($leg === 'pickup' ? 'info' : 'primary') }}">
+                                            {{ strtoupper($leg) }}
+                                        </span>
+                                    </td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>

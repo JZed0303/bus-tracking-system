@@ -20,6 +20,8 @@ class EmployeeResource extends JsonResource
             'department'    => $this->department,
             'position'      => $this->position,
             'status'        => $this->status,
+            'photo_path'    => $this->photo_path,
+            'photo_url'     => $this->photo_url,
 
             'user' => [
                 'id'         => $this->user?->id,

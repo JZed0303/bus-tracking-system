@@ -51,6 +51,12 @@ class BusContextResource extends JsonResource
                 'status'     => $trip->status,
                 'direction'  => $trip->direction,
                 'started_at' => $trip->actual_start_time,
+                'transfer_from_trip_id' => $trip->transfer_from_trip_id,
+            ] : null,
+
+            'assignment' => $assignment ? [
+                'id' => $assignment->id,
+                'leg' => $assignment->leg ?? 'both',
             ] : null,
         ];
     }

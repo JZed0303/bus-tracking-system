@@ -13,6 +13,11 @@
   --hm-red-2: #9E1B20;      /* deeper red for hover */
   --hm-orange: #E85D04;     /* accent orange */
   --hm-yellow: #F4C430;     /* accent yellow */
+  --hm-apex-1: #B32025;
+  --hm-apex-2: #E85D04;
+  --hm-apex-3: #F4C430;
+  --hm-apex-4: #9E1B20;
+  --hm-apex-5: #6B7280;
 
   /* Neutrals */
   --hm-bg: #F7F8FA;
@@ -485,4 +490,44 @@ color:white!important;
     }.page-content{
       padding:94px 12px 60px!important;
     }
+
+.apexcharts-tooltip,
+.apexcharts-xaxistooltip,
+.apexcharts-yaxistooltip{
+  background: #fff !important;
+  border: 1px solid var(--hm-border) !important;
+  color: var(--hm-text) !important;
+}
+.apexcharts-legend-text{
+  color: var(--hm-text) !important;
+}
+.apexcharts-gridline{
+  stroke: #eceff3 !important;
+}
 </style>
+<script>
+  (function () {
+    function cssVar(name, fallback) {
+      var value = getComputedStyle(document.documentElement).getPropertyValue(name);
+      return (value && value.trim()) || fallback;
+    }
+
+    function applyApexThemeDefaults() {
+      var palette = [
+        cssVar('--hm-apex-1', '#B32025'),
+        cssVar('--hm-apex-2', '#E85D04'),
+        cssVar('--hm-apex-3', '#F4C430'),
+        cssVar('--hm-apex-4', '#9E1B20'),
+        cssVar('--hm-apex-5', '#6B7280')
+      ];
+
+      window.Apex = window.Apex || {};
+      window.Apex.colors = palette;
+      window.Apex.chart = window.Apex.chart || {};
+      window.Apex.chart.foreColor = cssVar('--hm-muted', '#6B7280');
+    }
+
+    applyApexThemeDefaults();
+    window.addEventListener('DOMContentLoaded', applyApexThemeDefaults);
+  })();
+</script>

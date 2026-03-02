@@ -103,7 +103,8 @@
                         <div class="col-sm-9">
                             <select name="status" id="edit_status" class="form-select" required>
                                 <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="on_leave">On Leave</option>
+                                <option value="suspended">Suspended</option>
                             </select>
                             <div class="invalid-feedback">Status is required.</div>
                         </div>

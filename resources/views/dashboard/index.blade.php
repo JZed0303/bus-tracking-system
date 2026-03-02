@@ -258,7 +258,6 @@
 <script>
         new ApexCharts(document.querySelector("#dailyTripsChart"), {
             chart: { type: 'line', toolbar: { show: false } },
-            colors: ['#FF0000'], 
             stroke: {
                 curve: 'smooth',
                 width: 3
@@ -269,21 +268,18 @@
 
         new ApexCharts(document.querySelector("#employeesTransportedChart"), {
             chart: { type: 'bar', toolbar: { show: false } },
-            colors: ['#FF0000'], 
             series: [{ name: 'Employees', data: [280, 300, 290, 330, 310, 350, 380] }],
             xaxis: { categories: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] }
             }).render();
 
         new ApexCharts(document.querySelector("#routeUtilizationChart"), {
             chart: { type: 'donut' },
-            colors: ['#FF0000', '#FF4D4D', '#FF8080', '#FFB3B3'],
             series: [35, 25, 20, 20],
             labels: ['Route A','Route B','Route C','Others']
             }).render();
 
         new ApexCharts(document.querySelector("#onTimeDelayedChart"), {
             chart: { type: 'pie' },
-            colors: ['#FF0000', '#CCCCCC'], 
             series: [92, 8],
             labels: ['On-time','Delayed']
             }).render();

@@ -14,6 +14,14 @@ return [
         'analytics_cache_ttl_seconds' => (int) env('COMPANY_DASHBOARD_ANALYTICS_CACHE_TTL_SECONDS', 60),
     ],
 
+    'incident' => [
+        // If no replacement trip is created within this window, incident is considered unresolved.
+        'replacement_sla_minutes' => (int) env('TRANSPORT_INCIDENT_REPLACEMENT_SLA_MINUTES', 10),
+
+        // Pending transfer confirmations older than this window are escalation candidates.
+        'transfer_confirm_sla_minutes' => (int) env('TRANSPORT_TRANSFER_CONFIRM_SLA_MINUTES', 15),
+    ],
+
     'telemetry' => [
         'pruning_enabled' => env('TRANSPORT_TELEMETRY_PRUNING_ENABLED', true),
         'prune_after_days' => (int) env('TRANSPORT_TELEMETRY_PRUNE_AFTER_DAYS', 14),

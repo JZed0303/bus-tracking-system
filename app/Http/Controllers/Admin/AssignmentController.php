@@ -111,6 +111,7 @@ class AssignmentController extends Controller
             'company_id'     => ['required', 'exists:companies,id'],
             'effective_from' => ['required', 'date'],
             'effective_to'   => ['nullable', 'date', 'after_or_equal:effective_from'],
+            'leg'            => ['nullable', 'in:pickup,dropoff,both'],
         ]);
 
         $this->validateConflicts($validated);
@@ -118,6 +119,7 @@ class AssignmentController extends Controller
         Assignment::create([
             ...$validated,
             'status' => 'active', // keep if you store status in DB
+            'leg' => $validated['leg'] ?? 'both',
         ]);
 
         return redirect()
@@ -161,11 +163,15 @@ class AssignmentController extends Controller
             'company_id'     => ['required', 'exists:companies,id'],
             'effective_from' => ['required', 'date'],
             'effective_to'   => ['nullable', 'date', 'after_or_equal:effective_from'],
+            'leg'            => ['nullable', 'in:pickup,dropoff,both'],
         ]);
 
         $this->validateConflicts($validated, $assignment->id);
 
-        $assignment->update($validated);
+        $assignment->update([
+            ...$validated,
+            'leg' => $validated['leg'] ?? 'both',
+        ]);
 
         return redirect()
             ->route('admin.assignments.index')
@@ -178,6 +184,10 @@ class AssignmentController extends Controller
      */
     protected function validateConflicts(array $data, ?int $ignoreId = null): void
     {
+        // NEW: leg-aware conflict validation.
+        // "both" conflicts with pickup/dropoff; same leg conflicts with same leg.
+        $incomingLeg = $data['leg'] ?? 'both';
+
         $busyAssignments = Assignment::query()
             ->whereHas('trips', fn ($q) => $q->where('status', 'ongoing'));
 
@@ -199,8 +209,35 @@ class AssignmentController extends Controller
             $messages['route_id'] = 'Selected route is currently used by an ongoing trip.';
         }
 
+        // Existing protection: do not assign resources already in an ongoing trip.
         if (!empty($messages)) {
             throw ValidationException::withMessages($messages);
+        }
+
+        $from = $data['effective_from'];
+        $to = $data['effective_to'] ?? '9999-12-31';
+
+        // NEW: prevent overlapping active assignment windows for the same bus and conflicting leg.
+        $overlappingAssignments = Assignment::query()
+            ->where('status', 'active')
+            ->where('bus_id', $data['bus_id'])
+            ->whereDate('effective_from', '<=', $to)
+            ->where(function ($q) use ($from) {
+                $q->whereNull('effective_to')
+                    ->orWhereDate('effective_to', '>=', $from);
+            })
+            ->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))
+            ->get(['id', 'leg']);
+
+        $hasLegConflict = $overlappingAssignments->contains(function ($existing) use ($incomingLeg) {
+            $existingLeg = $existing->leg ?? 'both';
+            return $existingLeg === 'both' || $incomingLeg === 'both' || $existingLeg === $incomingLeg;
+        });
+
+        if ($hasLegConflict) {
+            throw ValidationException::withMessages([
+                'bus_id' => 'Selected bus already has an overlapping active assignment for the same trip leg.',
+            ]);
         }
     }
 }

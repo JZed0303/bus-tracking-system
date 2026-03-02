@@ -20,6 +20,7 @@ class Assignment extends Model implements Auditable
         'effective_from',
         'effective_to',
         'status',
+        'leg',
     ];
 
     protected $casts = [
@@ -97,6 +98,13 @@ public function scopeActive($query)
             $q->whereNull('effective_to')
               ->orWhere('effective_to', '>=', $today);
         });
+}
+
+public function supportsDirection(string $direction): bool
+{
+    $leg = $this->leg ?? 'both';
+
+    return $leg === 'both' || $leg === $direction;
 }
 
 }

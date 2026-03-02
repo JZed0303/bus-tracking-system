@@ -33,7 +33,12 @@ Trip Details
             </p>
         </div>
         <div class="col text-end">
-            <a href="{{ route('admin.trips.today') }}" class="btn btn-light btn-sm">
+            @if($trip->status === 'ongoing')
+                <button type="button" class="btn btn-danger btn-sm me-2" data-bs-toggle="modal" data-bs-target="#incidentModal">
+                    <i class="mdi mdi-alert-circle-outline"></i> Report Incident
+                </button>
+            @endif
+            <a href="{{ route('company.trips.today') }}" class="btn btn-light btn-sm">
                 <i class="mdi mdi-arrow-left"></i> Back to Trips
             </a>
         </div>
@@ -87,25 +92,35 @@ Trip Details
         </div>
     </div>
 
+    @if(!empty($pendingTransferEmployees) && $pendingTransferEmployees->isNotEmpty())
+        <div class="alert alert-warning d-flex align-items-start mb-3">
+            <i class="mdi mdi-transfer-right me-2 mt-1"></i>
+            <div>
+                <strong>Transferred Pending Confirmation:</strong>
+                {{ $pendingTransferEmployees->count() }} employee(s) are transferred to this trip but not yet re-scanned.
+            </div>
+        </div>
+    @endif
+
     <!-- TABS -->
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
             <a class="nav-link {{ $tab === 'timeline' ? 'active' : '' }}"
-               href="{{ route('admin.trips.show', $trip) }}?tab=timeline">
+               href="{{ route('company.trips.show', $trip) }}?tab=timeline">
                 <i class="mdi mdi-timeline-outline"></i> Timeline
             </a>
         </li>
 
         <li class="nav-item">
             <a class="nav-link {{ $tab === 'checkins' ? 'active' : '' }}"
-               href="{{ route('admin.trips.show', $trip) }}?tab=checkins">
+               href="{{ route('company.trips.show', $trip) }}?tab=checkins">
                 <i class="mdi mdi-account-clock-outline"></i> Employee Check-ins
             </a>
         </li>
 
         <li class="nav-item">
             <a class="nav-link {{ $tab === 'gps' ? 'active' : '' }}"
-               href="{{ route('admin.trips.show', $trip) }}?tab=gps">
+               href="{{ route('company.trips.show', $trip) }}?tab=gps">
                 <i class="mdi mdi-map-marker-path"></i> GPS Playback
             </a>
         </li>
@@ -154,7 +169,9 @@ Trip Details
                 <tr>
                     <th>Employee</th>
                     <th>Type</th>
+                    <th>Record Status</th>
                     <th width="220">Scanned At</th>
+                    <th width="160">Action</th>
                 </tr>
             </thead>
 
@@ -176,9 +193,40 @@ Trip Details
                         @endif
                     </td>
                     <td>
+                        @if($checkin->voided_at)
+                            <span class="badge bg-danger">Voided</span>
+                            <div class="small text-muted mt-1">
+                                {{ $checkin->voidedByUser?->full_name ?? $checkin->voidedByUser?->email ?? 'System' }}
+                            </div>
+                        @else
+                            <span class="badge bg-primary">Active</span>
+                        @endif
+                    </td>
+                    <td>
                         {{ $checkin->scan_time
                             ->timezone(config('app.timezone'))
                             ->format('M d, Y H:i') }}
+                        @if($checkin->voided_at && $checkin->void_reason)
+                            <div class="small text-danger mt-1">
+                                Reason: {{ $checkin->void_reason }}
+                            </div>
+                        @endif
+                    </td>
+                    <td>
+                        {{-- VOID FLOW: company can void incorrect scan records with required reason. --}}
+                        @if(!$checkin->voided_at)
+                            <form method="POST"
+                                  action="{{ route('company.trips.checkins.void', [$trip, $checkin]) }}"
+                                  onsubmit="const r=prompt('Void reason (required):'); if(!r){return false;} this.querySelector('input[name=reason]').value=r.trim(); if(!this.querySelector('input[name=reason]').value){return false;} return confirm('Confirm void this scan record?');">
+                                @csrf
+                                <input type="hidden" name="reason" value="">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="mdi mdi-close-circle-outline me-1"></i>Void
+                                </button>
+                            </form>
+                        @else
+                            <span class="text-muted small">No action</span>
+                        @endif
                     </td>
                 </tr>
             @endforeach
@@ -203,6 +251,83 @@ Trip Details
         </div>
     </div>
 
+    @if($trip->status === 'ongoing')
+        <div class="modal fade" id="incidentModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <form method="POST" action="{{ route('company.trips.incident', $trip) }}" class="modal-content">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Report Trip Incident</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Incident Type <span class="text-danger">*</span></label>
+                                <select name="incident_type" class="form-select" required>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="breakdown">Breakdown</option>
+                                    <option value="emergency">Emergency</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Replacement Bus (Optional)</label>
+                                <select name="replacement_bus_id" class="form-select">
+                                    <option value="">No Replacement</option>
+                                    @foreach($replacementBuses as $bus)
+                                        <option value="{{ $bus->id }}">
+                                            {{ $bus->plate_number }} (Cap: {{ $bus->capacity ?? 'N/A' }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Reason / Notes</label>
+                                <input type="text" name="reason" class="form-control" maxlength="255" placeholder="Required reason" required>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Employees To Transfer</label>
+                                <small class="d-block text-muted mb-2">Leave all unchecked to auto-transfer all currently onboard employees.</small>
+                                <div class="border rounded p-2" style="max-height: 220px; overflow: auto;">
+                                    @forelse($onboardEmployees as $employee)
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input" type="checkbox" name="employee_ids[]" value="{{ $employee->id }}" id="cmp-emp-{{ $employee->id }}">
+                                            <label class="form-check-label" for="cmp-emp-{{ $employee->id }}">
+                                                {{ $employee->user?->full_name ?? ('Employee #'.$employee->id) }}
+                                            </label>
+                                        </div>
+                                    @empty
+                                        <div class="text-muted small">No onboard employees detected.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            @if(auth()->user()?->can('update_trips') || auth()->user()?->hasRole('super_admin'))
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="override_capacity" value="1" id="company-override-capacity">
+                                        <label class="form-check-label" for="company-override-capacity">
+                                            Override capacity limit (requires trip update permission)
+                                        </label>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="mdi mdi-alert"></i> Submit Incident
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
 </div>
 @endsection
 
@@ -219,7 +344,10 @@ $(function () {
         $('#checkins-table').DataTable({
             responsive: true,
             pageLength: 10,
-            order: [[2, 'asc']]
+            order: [[3, 'desc']],
+            columnDefs: [
+                { targets: 4, orderable: false, searchable: false }
+            ]
         });
     @endif
 });

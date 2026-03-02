@@ -13,9 +13,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class DriverController extends Controller
 {
+    private function normalizeDriverStatus(string $status): string
+    {
+        // Backward compatibility for legacy UI value.
+        return $status === 'inactive' ? 'suspended' : $status;
+    }
+
     /**
      * Display a listing of drivers.
      * URL: /admin/drivers
@@ -35,7 +42,8 @@ class DriverController extends Controller
                 });
             })
             ->when(request('status'), function ($q) {
-                $q->where('status', request('status'));
+                $status = request('status') === 'inactive' ? 'suspended' : request('status');
+                $q->where('status', $status);
             })
             ->latest()
             ->get();
@@ -97,42 +105,51 @@ class DriverController extends Controller
             'email'          => ['required', 'email', 'unique:users,email'],
             'license_number' => ['required', 'string', 'unique:drivers,license_number'],
             'phone'          => ['nullable', 'string', 'max:20'],
-            'status'         => ['required', 'in:active,inactive'],
+            'status'         => ['required', 'in:active,on_leave,suspended,inactive'],
 
             // Optional driver photo (FilePond storeAsFile -> normal upload)
             'photo'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        DB::transaction(function () use ($validated, $request) {
+        try {
+            DB::transaction(function () use ($validated, $request) {
 
-            // Create user account for driver
-            $user = User::create([
-                'first_name'  => $validated['first_name'],
-                'middle_name' => $validated['middle_name'] ?? null,
-                'last_name'   => $validated['last_name'],
-                'email'       => $validated['email'],
-                'password'    => Hash::make('password123'), // temporary password
-                'role'        => 'driver',
-            ]);
+                // Create user account for driver
+                $user = User::create([
+                    'first_name'  => $validated['first_name'],
+                    'middle_name' => $validated['middle_name'] ?? null,
+                    'last_name'   => $validated['last_name'],
+                    'email'       => $validated['email'],
+                    'password'    => Hash::make('password123'), // temporary password
+                    'role'        => 'driver',
+                ]);
 
-            // Photo upload (optional)
-            $photoPath = null;
-            if ($request->hasFile('photo')) {
-                $photoPath = $request->file('photo')->store('drivers', 'public');
-            }
+                // Photo upload (optional)
+                $photoPath = null;
+                if ($request->hasFile('photo')) {
+                    $photoPath = $request->file('photo')->store('drivers', 'public');
+                }
 
-            // Create driver profile
-            Driver::create([
-                'user_id'        => $user->id,
-                'company_id'     => $validated['company_id'],
-                'license_number' => $validated['license_number'],
-                'phone'          => $validated['phone'] ?? null,
-                'status'         => $validated['status'],
+                // Create driver profile
+                Driver::create([
+                    'user_id'        => $user->id,
+                    'company_id'     => $validated['company_id'],
+                    'license_number' => $validated['license_number'],
+                    'phone'          => $validated['phone'] ?? null,
+                    'status'         => $this->normalizeDriverStatus($validated['status']),
 
-                // IMPORTANT: ensure your drivers table has this column (nullable)
-                'photo_path'     => $photoPath,
-            ]);
-        });
+                    // IMPORTANT: ensure your drivers table has this column (nullable)
+                    'photo_path'     => $photoPath,
+                ]);
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route('admin.drivers.index')
+                ->withInput()
+                ->with('error', 'Unable to save driver. Please check input and try again.');
+        }
 
         return redirect()
             ->route('admin.drivers.index')
@@ -163,7 +180,7 @@ class DriverController extends Controller
                 Rule::unique('drivers', 'license_number')->ignore($driver->id),
             ],
             'phone'          => ['nullable', 'string', 'max:20'],
-            'status'         => ['required', 'in:active,inactive'],
+            'status'         => ['required', 'in:active,on_leave,suspended,inactive'],
 
             // Optional replace photo
             'photo'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
@@ -184,7 +201,7 @@ class DriverController extends Controller
                 'company_id'     => $validated['company_id'],
                 'license_number' => $validated['license_number'],
                 'phone'          => $validated['phone'] ?? null,
-                'status'         => $validated['status'],
+                'status'         => $this->normalizeDriverStatus($validated['status']),
             ]);
 
             // 3) Photo replace (optional)

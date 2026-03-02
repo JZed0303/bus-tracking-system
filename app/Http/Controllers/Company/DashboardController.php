@@ -14,6 +14,7 @@ use App\Models\TransportRoute;
 use App\Models\Trip;
 use App\Models\Checkin;
 use App\Models\Assignment;
+use App\Models\TripEmployeeTransfer;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
@@ -81,6 +82,10 @@ class DashboardController extends Controller
                     'tripCompletionPercent' => 0.0,
                     'assignedBusesCount' => 0,
                     'onlineBusesCount' => 0,
+                    'incidentsTodayCount' => 0,
+                    'pendingTransferConfirmationsCount' => 0,
+                    'unresolvedReassignmentCasesCount' => 0,
+                    'pendingTransferEscalationsCount' => 0,
                     'dailyTransportSummary' => $dateRange->map(fn (Carbon $date) => [
                         'date' => $date->toDateString(),
                         'total' => 0,
@@ -160,6 +165,45 @@ class DashboardController extends Controller
             $tripCompletionPercent = $todayTrips > 0
                 ? round(($todayTripsCompleted / $todayTrips) * 100, 1)
                 : 0.0;
+
+            $incidentReplacementSlaMinutes = max(1, (int) config('transport.incident.replacement_sla_minutes', 10));
+            $transferConfirmSlaMinutes = max(1, (int) config('transport.incident.transfer_confirm_sla_minutes', 15));
+            $replacementSlaCutoff = now('Asia/Manila')->subMinutes($incidentReplacementSlaMinutes);
+            $transferConfirmSlaCutoff = now('Asia/Manila')->subMinutes($transferConfirmSlaMinutes);
+
+            $incidentsTodayCount = Trip::query()
+                ->whereHas('assignment', function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId);
+                })
+                ->whereNotNull('incident_reported_at')
+                ->whereDate('incident_reported_at', $today->toDateString())
+                ->count();
+
+            $pendingTransferConfirmationsCount = TripEmployeeTransfer::query()
+                ->where('status', 'pending_confirm')
+                ->whereHas('toTrip.assignment', function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId);
+                })
+                ->count();
+
+            $pendingTransferEscalationsCount = TripEmployeeTransfer::query()
+                ->where('status', 'pending_confirm')
+                ->where('transferred_at', '<=', $transferConfirmSlaCutoff)
+                ->whereHas('toTrip.assignment', function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId);
+                })
+                ->count();
+
+            $unresolvedReassignmentCasesCount = Trip::query()
+                ->whereHas('assignment', function ($q) use ($companyId) {
+                    $q->where('company_id', $companyId);
+                })
+                ->whereIn('ended_reason', ['maintenance', 'breakdown'])
+                ->whereNotNull('incident_reported_at')
+                ->whereDate('incident_reported_at', $today->toDateString())
+                ->where('incident_reported_at', '<=', $replacementSlaCutoff)
+                ->whereDoesntHave('replacementTrips')
+                ->count();
 
             $activeAssignments = Assignment::query()
                 ->where('company_id', $companyId)
@@ -320,6 +364,10 @@ class DashboardController extends Controller
                 'tripCompletionPercent' => $tripCompletionPercent,
                 'assignedBusesCount' => $assignedBusesCount,
                 'onlineBusesCount' => $onlineBusesCount,
+                'incidentsTodayCount' => $incidentsTodayCount,
+                'pendingTransferConfirmationsCount' => $pendingTransferConfirmationsCount,
+                'unresolvedReassignmentCasesCount' => $unresolvedReassignmentCasesCount,
+                'pendingTransferEscalationsCount' => $pendingTransferEscalationsCount,
                 'dailyTransportSummary' => $dailyTransportSummary,
                 'buses' => $companyBuses,
                 'companyBuses' => $companyBuses,
@@ -332,7 +380,7 @@ class DashboardController extends Controller
 
         $dashboardData = $analyticsCacheEnabled
             ? Cache::remember(
-                "company-dashboard:v1:{$companyId}:{$today->toDateString()}",
+                "company-dashboard:v2:{$companyId}:{$today->toDateString()}",
                 now()->addSeconds($analyticsCacheTtlSeconds),
                 $buildDashboardData
             )

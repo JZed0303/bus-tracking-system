@@ -14,6 +14,7 @@ class Trip extends Model implements Auditable
 
     protected $fillable = [
         'assignment_id',
+        'transfer_from_trip_id',
         'trip_date',
         'scheduled_start_time',
         'scheduled_end_time',
@@ -21,6 +22,8 @@ class Trip extends Model implements Auditable
         'actual_end_time',
         'direction',
         'status',
+        'ended_reason',
+        'incident_reported_at',
     ];
 
     protected $casts = [
@@ -29,6 +32,7 @@ class Trip extends Model implements Auditable
         'scheduled_end_time'   => 'datetime',
         'actual_start_time'    => 'datetime',
         'actual_end_time'      => 'datetime',
+        'incident_reported_at' => 'datetime',
     ];
 
     /* ================= RELATIONSHIPS ================= */
@@ -51,6 +55,16 @@ class Trip extends Model implements Auditable
     public function checkins()
     {
         return $this->hasMany(Checkin::class);
+    }
+
+    public function transferFromTrip()
+    {
+        return $this->belongsTo(Trip::class, 'transfer_from_trip_id');
+    }
+
+    public function replacementTrips()
+    {
+        return $this->hasMany(Trip::class, 'transfer_from_trip_id');
     }
 
     public function bus()

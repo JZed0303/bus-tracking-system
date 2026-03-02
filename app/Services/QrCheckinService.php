@@ -5,11 +5,15 @@ namespace App\Services;
 use App\Models\Trip;
 use App\Models\EmployeeQrCode;
 use App\Models\Checkin;
+use App\Models\TripEmployeeTransfer;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 class QrCheckinService
 {
+    // ===== NEW: Transfer-aware scan rules =====
+    // Allows replacement-trip scans when there is an approved transfer record,
+    // while still blocking unsafe "open on another unrelated trip" cases.
     /**
      * true  => employee must be assigned to THIS trip (Trip->employees pivot)
      * false => employee can scan on any trip, but cannot have an open session elsewhere
@@ -20,6 +24,12 @@ class QrCheckinService
      * Allowed radius (meters) between scanner GPS and the bus latest trip GPS.
      */
     private int $allowedRadiusMeters = 150;
+
+    /**
+     * Minimum gap between two scans of the same employee on the same trip.
+     * Prevents accidental double-tap and near-duplicate sync records.
+     */
+    private int $minScanIntervalSeconds = 15;
 
     /**
      * Backward-compatible entry point (still accepts token),
@@ -68,33 +78,43 @@ class QrCheckinService
 
     return DB::transaction(function () use ($trip, $employee, $lat, $lng) {
 
+        $scanAt = Carbon::now('Asia/Manila');
+
         // ✅ lock the latest scan row (prevents double-checkout)
         $last = Checkin::query()
             ->where('trip_id', $trip->id)
             ->where('employee_id', $employee->id)
+            ->whereNull('voided_at')
             ->orderByDesc('id')
             ->lockForUpdate()
             ->first();
 
-        if (!$last) {
-            $scanType = 'checkin';
-        } elseif ($last->scan_type === 'checkin') {
-            $scanType = 'checkout';
-        } else {
-            throw ValidationException::withMessages([
-                'scan' => ['Employee already checked out.'],
-            ]);
-        }
+        $this->assertScanTimeIsValid($last?->scan_time, $scanAt);
+        $scanType = $this->resolveScanTypeFromLast($last);
 
-        return Checkin::create([
+        $checkin = Checkin::create([
             'trip_id'                => $trip->id,
             'employee_id'            => $employee->id,
             'scan_type'              => $scanType,
-            'scan_time'              => Carbon::now('Asia/Manila'),
+            'scan_time'              => $scanAt,
             'scan_lat'               => $lat,
             'scan_lng'               => $lng,
             'scanned_by_employee_id' => $employee->id,
         ]);
+
+        if ($scanType === 'checkin') {
+            // NEW FLOW: first successful check-in on replacement trip confirms transfer completion.
+            TripEmployeeTransfer::query()
+                ->where('to_trip_id', $trip->id)
+                ->where('employee_id', $employee->id)
+                ->where('status', 'pending_confirm')
+                ->update([
+                    'status' => 'confirmed',
+                    'confirmed_at' => now(),
+                ]);
+        }
+
+        return $checkin;
     });
 }
 
@@ -106,12 +126,14 @@ class QrCheckinService
         return Checkin::query()
             ->where('employee_id', $employeeId)
             ->where('scan_type', 'checkin')
+            ->whereNull('voided_at')
             ->whereNotExists(function ($q) use ($employeeId) {
                 $q->selectRaw('1')
                   ->from('checkins as c2')
                   ->whereColumn('c2.trip_id', 'checkins.trip_id')
                   ->where('c2.employee_id', $employeeId)
-                  ->where('c2.scan_type', 'checkout');
+                  ->where('c2.scan_type', 'checkout')
+                  ->whereNull('c2.voided_at');
             })
             ->whereExists(function ($q) {
                 $q->selectRaw('1')
@@ -141,6 +163,14 @@ class QrCheckinService
         ?float $lng,
         string $clientScanId
     ): Checkin {
+        $existing = Checkin::query()
+            ->where('client_scan_id', $clientScanId)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
         // ✅ Validate ONLY active assignment
         $this->assertTripHasValidAssignment($trip);
         $this->assertTripNotEnded($trip);
@@ -160,13 +190,22 @@ class QrCheckinService
 
         $this->assertWithinAllowedArea($trip, (float) $lat, (float) $lng);
 
-        $scanType = $this->resolveScanType($trip->id, $employee->id);
+        $scanAt = Carbon::parse($scanTime)->timezone('Asia/Manila');
+        $last = Checkin::query()
+            ->where('trip_id', $trip->id)
+            ->where('employee_id', $employee->id)
+            ->whereNull('voided_at')
+            ->orderByDesc('id')
+            ->first();
+
+        $this->assertScanTimeIsValid($last?->scan_time, $scanAt);
+        $scanType = $this->resolveScanTypeFromLast($last);
 
         return Checkin::create([
             'trip_id'                => $trip->id,
             'employee_id'            => $employee->id,
             'scan_type'              => $scanType,
-            'scan_time'              => Carbon::parse($scanTime)->timezone('Asia/Manila'),
+            'scan_time'              => $scanAt,
             'scan_lat'               => $lat,
             'scan_lng'               => $lng,
 
@@ -194,18 +233,47 @@ class QrCheckinService
 
     private function assertTripHasValidAssignment(Trip $trip): void
     {
-        // IMPORTANT: if $trip->assignment is not eager loaded,
-        // this will trigger a query. That’s OK, but you can eager load it
-        // via bus->activeTrip relationship for even more speed.
+        $trip->loadMissing('assignment.bus', 'assignment.route', 'assignment.driver');
+
         if (!$trip->assignment || !$trip->assignment->isActive()) {
             throw ValidationException::withMessages([
                 'assignment' => ['Trip assignment is not active.'],
             ]);
         }
 
-        if (!$trip->assignment->bus || !$trip->assignment->route) {
+        // NEW RULE: assignment leg must support the trip direction.
+        if (!$trip->assignment->supportsDirection($trip->direction)) {
             throw ValidationException::withMessages([
-                'route' => ['Trip has no valid bus or route assignment.'],
+                'assignment' => ['Assignment leg does not match trip direction.'],
+            ]);
+        }
+
+        // NEW RULE: assignment entities must be active at scan time.
+        if (
+            !$trip->assignment->bus
+            || !$trip->assignment->route
+            || !$trip->assignment->driver
+        ) {
+            throw ValidationException::withMessages([
+                'assignment' => ['Trip has incomplete assignment data.'],
+            ]);
+        }
+
+        if ($trip->assignment->bus->status !== 'active') {
+            throw ValidationException::withMessages([
+                'bus' => ['Assigned bus is not active.'],
+            ]);
+        }
+
+        if ($trip->assignment->driver->status !== 'active') {
+            throw ValidationException::withMessages([
+                'driver' => ['Assigned driver is not active.'],
+            ]);
+        }
+
+        if ($trip->assignment->route->status !== 'active') {
+            throw ValidationException::withMessages([
+                'route' => ['Assigned route is not active.'],
             ]);
         }
     }
@@ -262,20 +330,38 @@ class QrCheckinService
      */
     private function assertEmployeeNotOpenOnOtherTrip(int $currentTripId, int $employeeId): void
     {
-        $hasOpenElsewhere = Checkin::query()
+        $openTripIds = Checkin::query()
             ->where('employee_id', $employeeId)
             ->where('trip_id', '!=', $currentTripId)
             ->where('scan_type', 'checkin')
+            ->whereNull('voided_at')
             ->whereNotExists(function ($q) use ($employeeId) {
                 $q->selectRaw('1')
                   ->from('checkins as c2')
                   ->whereColumn('c2.trip_id', 'checkins.trip_id')
                   ->where('c2.employee_id', $employeeId)
-                  ->where('c2.scan_type', 'checkout');
+                  ->where('c2.scan_type', 'checkout')
+                  ->whereNull('c2.voided_at');
             })
-            ->exists();
+            ->pluck('trip_id')
+            ->unique()
+            ->values();
 
-        if ($hasOpenElsewhere) {
+        if ($openTripIds->isEmpty()) {
+            return;
+        }
+
+        // NEW RULE: allow an existing open trip only if this scan is for a mapped transfer target trip.
+        $allowedTransferFromTripIds = TripEmployeeTransfer::query()
+            ->where('to_trip_id', $currentTripId)
+            ->where('employee_id', $employeeId)
+            ->whereIn('status', ['pending_confirm', 'confirmed'])
+            ->pluck('from_trip_id')
+            ->unique();
+
+        $disallowedOpenTripIds = $openTripIds->diff($allowedTransferFromTripIds);
+
+        if ($disallowedOpenTripIds->isNotEmpty()) {
             throw ValidationException::withMessages([
                 'employee' => ['Employee is already checked-in on another trip/bus.'],
             ]);
@@ -319,25 +405,43 @@ class QrCheckinService
     /**
      * ✅ FAST: 1 query by reading the latest scan_type
      */
-    private function resolveScanType(int $tripId, int $employeeId): string
+    private function resolveScanTypeFromLast(?Checkin $last): string
     {
-        $lastType = Checkin::query()
-            ->where('trip_id', $tripId)
-            ->where('employee_id', $employeeId)
-            ->orderByDesc('id')
-            ->value('scan_type');
-
-        if ($lastType === null) {
+        if ($last === null) {
             return 'checkin';
         }
 
-        if ($lastType === 'checkout') {
+        if ($last->scan_type === 'checkout') {
             throw ValidationException::withMessages([
                 'scan' => ['Employee already checked out.'],
             ]);
         }
 
         return 'checkout';
+    }
+
+    private function assertScanTimeIsValid($lastScanTime, Carbon $currentScanTime): void
+    {
+        if (!$lastScanTime) {
+            return;
+        }
+
+        $last = $lastScanTime instanceof Carbon
+            ? $lastScanTime->copy()
+            : Carbon::parse($lastScanTime);
+
+        if ($currentScanTime->lessThanOrEqualTo($last)) {
+            throw ValidationException::withMessages([
+                'scan' => ['Scan time must be later than the last scan.'],
+            ]);
+        }
+
+        $diffSeconds = $last->diffInSeconds($currentScanTime);
+        if ($diffSeconds < $this->minScanIntervalSeconds) {
+            throw ValidationException::withMessages([
+                'scan' => ["Duplicate scan detected. Please wait {$this->minScanIntervalSeconds} seconds before scanning again."],
+            ]);
+        }
     }
 
     private function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): int

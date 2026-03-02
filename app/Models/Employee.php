@@ -11,6 +11,8 @@ class Employee extends Model implements Auditable
 {
     use HasFactory, AuditableTrait;
 
+    protected $appends = ['photo_url'];
+
     protected $fillable = [
         'user_id',
         'company_id',
@@ -20,6 +22,15 @@ class Employee extends Model implements Auditable
         'photo_path',
         'status',
     ];
+
+    public function getPhotoUrlAttribute(): string
+    {
+        if (!empty($this->photo_path)) {
+            return asset('storage/' . ltrim($this->photo_path, '/'));
+        }
+
+        return asset('build/images/user-placeholder.png');
+    }
 
     /* ================= RELATIONSHIPS ================= */
 

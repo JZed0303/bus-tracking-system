@@ -130,6 +130,7 @@
                     <th>Company</th>
                     <th>Driver</th>
                     <th>Bus</th>
+                    <th>Leg</th>
                     <th>Effective Period</th>
                     <th>Status</th>
                     <th width="160" class="text-center">Actions</th>
@@ -161,6 +162,14 @@
                         <td>
                             <div class="fw-semibold">{{ $assignment->bus->plate_number }}</div>
                             <small class="text-muted">Bus ID: {{ $assignment->bus_id }}</small>
+                        </td>
+
+                        {{-- LEG --}}
+                        <td>
+                            @php($leg = $assignment->leg ?? 'both')
+                            <span class="badge bg-{{ $leg === 'both' ? 'dark' : ($leg === 'pickup' ? 'info' : 'primary') }}">
+                                {{ strtoupper($leg) }}
+                            </span>
                         </td>
 
                         {{-- EFFECTIVE PERIOD --}}
@@ -218,7 +227,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted">
+                        <td colspan="8" class="text-center text-muted">
                             No assignments found.
                         </td>
                     </tr>
@@ -244,9 +253,9 @@ $(function () {
     $('#assignments-table').DataTable({
         responsive: true,
         pageLength: 10,
-        order: [[4, 'desc']],
+        order: [[5, 'desc']],
         columnDefs: [
-            { targets: [6], orderable: false, searchable: false } // actions
+            { targets: [7], orderable: false, searchable: false } // actions
         ]
     });
 });

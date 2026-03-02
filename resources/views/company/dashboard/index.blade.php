@@ -204,6 +204,42 @@
         </div>
     </div>
 
+    <div class="row g-3 mb-4">
+        <div class="col-xl-4 col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <small class="text-muted">Incidents Today</small>
+                    <h3 class="mb-1 text-danger">{{ number_format($incidentsTodayCount) }}</h3>
+                    <small class="text-muted">Maintenance/Breakdown/Emergency reported today</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <small class="text-muted">Pending Transfer Confirmations</small>
+                    <h3 class="mb-1 text-warning">{{ number_format($pendingTransferConfirmationsCount) }}</h3>
+                    <small class="{{ ($pendingTransferEscalationsCount ?? 0) > 0 ? 'text-danger' : 'text-muted' }}">
+                        {{ number_format($pendingTransferEscalationsCount ?? 0) }} beyond SLA
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-12">
+            <div class="card h-100">
+                <div class="card-body">
+                    <small class="text-muted">Unresolved Reassignment Cases</small>
+                    <h3 class="mb-1 {{ $unresolvedReassignmentCasesCount > 0 ? 'text-danger' : 'text-success' }}">
+                        {{ number_format($unresolvedReassignmentCasesCount) }}
+                    </h3>
+                    <small class="text-muted">Incident exceeded replacement SLA with no replacement trip</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ===================== ANALYTICS (startpage chart block pattern) ===================== --}}
     <div class="row g-3">
         <div class="col-xl-6">
@@ -357,7 +393,6 @@
         xaxis: { categories: tripStatusTrend.labels || [] },
         stroke: { curve: 'smooth', width: 2 },
         dataLabels: { enabled: false },
-        colors: ['#0dcaf0', '#198754', '#dc3545'],
         noData: { text: 'No trip trend data yet' }
     };
 
@@ -366,7 +401,6 @@
         series: [{ name: 'Employees', data: transportTrend.series || [] }],
         xaxis: { categories: transportTrend.labels || [] },
         dataLabels: { enabled: false },
-        colors: ['#0d6efd'],
         noData: { text: 'No transport data yet' }
     };
 
@@ -382,7 +416,7 @@
         chart: { type: 'pie', height: 260 },
         series: (todayCompleted + todayDelayed) > 0 ? [todayCompleted, todayDelayed] : [1],
         labels: (todayCompleted + todayDelayed) > 0 ? ['On-time (Completed)', 'Delayed / Pending'] : ['No Trip Data'],
-        colors: (todayCompleted + todayDelayed) > 0 ? ['#198754', '#fd7e14'] : ['#ced4da'],
+        colors: (todayCompleted + todayDelayed) > 0 ? undefined : ['#ced4da'],
     };
 
     new ApexCharts(document.querySelector('#dailyTripsChart'), dailyTripsOptions).render();

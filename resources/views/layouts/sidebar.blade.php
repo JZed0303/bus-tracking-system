@@ -588,6 +588,12 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                 <span>Module Management</span>
             </a>
         </li>
+        <li>
+            <a href="{{ route('admin.developer-tools.index') }}">
+                <i class="ri-tools-fill"></i>
+                <span>Developer Tools</span>
+            </a>
+        </li>
     @endif
 @endcan
 
@@ -595,10 +601,10 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                 {{-- ================= ACCOUNT ================= --}}
                 <li class="menu-title">Account</li>
 
-                @php($isSettingsRoute = request()->routeIs('settings.*'))
+                @php($isSettingsThemeOverrideRoute = request()->routeIs('settings.theme-override.*') || request()->routeIs('settings.index'))
 
-                <li class="{{ $isSettingsRoute ? 'mm-active' : '' }}">
-                    <a href="{{ route('settings.index') }}" class="{{ $isSettingsRoute ? 'active' : '' }}">
+                <li class="{{ $isSettingsThemeOverrideRoute ? 'mm-active' : '' }}">
+                    <a href="{{ route('settings.theme-override.index') }}" class="{{ $isSettingsThemeOverrideRoute ? 'active' : '' }}">
                         <i class="ri-settings-3-line"></i>
                         <span>Settings</span>
                     </a>

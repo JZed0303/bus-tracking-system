@@ -25,6 +25,7 @@ public function get()
     public function employeesForTrip($trip)
     {
         return $trip->checkins
+            ->whereNull('voided_at')
             ->groupBy('employee_id')
             ->map(fn ($c) => $c->first()->employee);
     }
@@ -49,6 +50,7 @@ public function get()
     {
         $types = $employee->checkins
             ->where('trip_id', $trip->id)
+            ->whereNull('voided_at')
             ->pluck('scan_type');
 
         return match (true) {

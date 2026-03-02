@@ -102,6 +102,11 @@
             </p>
         </div>
         <div class="col text-end">
+            @if($trip->status === 'ongoing')
+                <button type="button" class="btn btn-danger btn-sm me-2" data-bs-toggle="modal" data-bs-target="#incidentModal">
+                    <i class="mdi mdi-alert-circle-outline"></i> Report Incident
+                </button>
+            @endif
             <a href="{{ route('admin.trips.today') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="mdi mdi-arrow-left"></i> Back to Today’s Trips
             </a>
@@ -136,6 +141,16 @@
                         <div class="small text-muted mt-3">
                             <span class="fw-semibold text-dark">Direction:</span> {{ $trip->direction_label }}
                         </div>
+                        @if($trip->transfer_from_trip_id)
+                            <div class="small text-muted mt-1">
+                                <span class="fw-semibold text-dark">Replacement Of Trip:</span> #{{ $trip->transfer_from_trip_id }}
+                            </div>
+                        @endif
+                        @if($trip->ended_reason)
+                            <div class="small text-muted mt-1">
+                                <span class="fw-semibold text-dark">Ended Reason:</span> {{ ucfirst($trip->ended_reason) }}
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -191,6 +206,16 @@
         </div>
     </div>
 
+    @if(!empty($pendingTransferEmployees) && $pendingTransferEmployees->isNotEmpty())
+        <div class="alert alert-warning d-flex align-items-start mb-3">
+            <i class="mdi mdi-transfer-right me-2 mt-1"></i>
+            <div>
+                <strong>Transferred Pending Confirmation:</strong>
+                {{ $pendingTransferEmployees->count() }} employee(s) are transferred to this trip but not yet re-scanned.
+            </div>
+        </div>
+    @endif
+
     {{-- TABS --}}
     <ul class="nav nav-tabs nav-tabs-custom mb-3">
         <li class="nav-item">
@@ -236,6 +261,8 @@
 
                     $gpsPointsCount = $trip->locations()->count();
                     $latestScanByEmployee = $trip->checkins
+                        // VOID FLOW: timeline counters should ignore voided scans.
+                        ->whereNull('voided_at')
                         ->sortBy('scan_time')
                         ->groupBy('employee_id')
                         ->map(fn ($rows) => $rows->last());
@@ -331,46 +358,182 @@
                 @else
                     @php
                         $checkinRows = $trip->checkins->sortByDesc('scan_time')->values();
+                        $checkinOnlyRows = $checkinRows->where('scan_type', 'checkin')->values();
+                        $checkoutOnlyRows = $checkinRows->where('scan_type', 'checkout')->values();
                     @endphp
-                    <div class="table-responsive">
-                        <table id="checkins-table"
-                               class="table table-bordered table-striped table-hover table-sm dt-responsive mb-0"
-                               style="width:100%">
-                            <thead class="table-light">
-                            <tr>
-                                <th style="width: 60px;">#</th>
-                                <th>Employee</th>
-                                <th style="width: 140px;">Type</th>
-                                <th style="width: 240px;">Scanned At (PHT)</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($checkinRows as $index => $checkin)
-                                <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>
-                                        {{ optional($checkin->employee?->user)->full_name ?? '—' }}
-                                    </td>
-                                    <td>
-                                        @if($checkin->scan_type === 'checkin')
-                                            <span class="badge bg-success">
-                                                <i class="mdi mdi-login me-1"></i> Check-in
-                                            </span>
-                                        @else
-                                            <span class="badge bg-secondary">
-                                                <i class="mdi mdi-logout me-1"></i> Check-out
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        {{ $checkin->scan_time
-                                            ->timezone('Asia/Manila')
-                                            ->format('M d, Y h:iA') }}
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
+                    <ul class="nav nav-pills mb-3" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active"
+                               id="checkins-in-tab"
+                               data-bs-toggle="pill"
+                               href="#checkins-in-pane"
+                               role="tab"
+                               aria-controls="checkins-in-pane"
+                               aria-selected="true">
+                                <i class="mdi mdi-login me-1"></i>
+                                Check-ins ({{ $checkinOnlyRows->count() }})
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                               id="checkins-out-tab"
+                               data-bs-toggle="pill"
+                               href="#checkins-out-pane"
+                               role="tab"
+                               aria-controls="checkins-out-pane"
+                               aria-selected="false">
+                                <i class="mdi mdi-logout me-1"></i>
+                                Check-outs ({{ $checkoutOnlyRows->count() }})
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="checkins-in-pane" role="tabpanel" aria-labelledby="checkins-in-tab">
+                            @if($checkinOnlyRows->isEmpty())
+                                <div class="alert alert-light border d-flex align-items-center mb-0">
+                                    <i class="mdi mdi-information-outline text-muted me-2"></i>
+                                    <span class="text-muted">No check-in records for this trip.</span>
+                                </div>
+                            @else
+                                <div class="table-responsive">
+                                    <table id="checkins-in-table"
+                                           class="table table-bordered table-striped table-hover table-sm dt-responsive mb-0"
+                                           style="width:100%">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 60px;">#</th>
+                                            <th>Employee</th>
+                                            <th style="width: 140px;">Type</th>
+                                            <th style="width: 140px;">Record Status</th>
+                                            <th style="width: 240px;">Scanned At (PHT)</th>
+                                            <th style="width: 180px;">Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($checkinOnlyRows as $index => $checkin)
+                                            <tr>
+                                                <td>{{ $index + 1 }}</td>
+                                                <td>{{ optional($checkin->employee?->user)->full_name ?? '—' }}</td>
+                                                <td>
+                                                    <span class="badge bg-success">
+                                                        <i class="mdi mdi-login me-1"></i> Check-in
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if($checkin->voided_at)
+                                                        <span class="badge bg-danger">Voided</span>
+                                                        <div class="small text-muted mt-1">
+                                                            {{ $checkin->voidedByUser?->full_name ?? $checkin->voidedByUser?->email ?? 'System' }}
+                                                        </div>
+                                                    @else
+                                                        <span class="badge bg-primary">Active</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    {{ $checkin->scan_time->timezone('Asia/Manila')->format('M d, Y h:iA') }}
+                                                    @if($checkin->voided_at && $checkin->void_reason)
+                                                        <div class="small text-danger mt-1">
+                                                            Reason: {{ $checkin->void_reason }}
+                                                        </div>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    {{-- VOID FLOW: admin can void incorrect scan records with required reason. --}}
+                                                    @if(!$checkin->voided_at)
+                                                        <form method="POST"
+                                                              action="{{ route('admin.trips.checkins.void', [$trip, $checkin]) }}"
+                                                              onsubmit="const r=prompt('Void reason (required):'); if(!r){return false;} this.querySelector('input[name=reason]').value=r.trim(); if(!this.querySelector('input[name=reason]').value){return false;} return confirm('Confirm void this scan record?');">
+                                                            @csrf
+                                                            <input type="hidden" name="reason" value="">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                <i class="mdi mdi-close-circle-outline me-1"></i>Void
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        <span class="text-muted small">No action</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="tab-pane fade" id="checkins-out-pane" role="tabpanel" aria-labelledby="checkins-out-tab">
+                            @if($checkoutOnlyRows->isEmpty())
+                                <div class="alert alert-light border d-flex align-items-center mb-0">
+                                    <i class="mdi mdi-information-outline text-muted me-2"></i>
+                                    <span class="text-muted">No check-out records for this trip.</span>
+                                </div>
+                            @else
+                                <div class="table-responsive">
+                                    <table id="checkins-out-table"
+                                           class="table table-bordered table-striped table-hover table-sm dt-responsive mb-0"
+                                           style="width:100%">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 60px;">#</th>
+                                            <th>Employee</th>
+                                            <th style="width: 140px;">Type</th>
+                                            <th style="width: 140px;">Record Status</th>
+                                            <th style="width: 240px;">Scanned At (PHT)</th>
+                                            <th style="width: 180px;">Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($checkoutOnlyRows as $index => $checkin)
+                                            <tr>
+                                                <td>{{ $index + 1 }}</td>
+                                                <td>{{ optional($checkin->employee?->user)->full_name ?? '—' }}</td>
+                                                <td>
+                                                    <span class="badge bg-secondary">
+                                                        <i class="mdi mdi-logout me-1"></i> Check-out
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if($checkin->voided_at)
+                                                        <span class="badge bg-danger">Voided</span>
+                                                        <div class="small text-muted mt-1">
+                                                            {{ $checkin->voidedByUser?->full_name ?? $checkin->voidedByUser?->email ?? 'System' }}
+                                                        </div>
+                                                    @else
+                                                        <span class="badge bg-primary">Active</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    {{ $checkin->scan_time->timezone('Asia/Manila')->format('M d, Y h:iA') }}
+                                                    @if($checkin->voided_at && $checkin->void_reason)
+                                                        <div class="small text-danger mt-1">
+                                                            Reason: {{ $checkin->void_reason }}
+                                                        </div>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    {{-- VOID FLOW: admin can void incorrect scan records with required reason. --}}
+                                                    @if(!$checkin->voided_at)
+                                                        <form method="POST"
+                                                              action="{{ route('admin.trips.checkins.void', [$trip, $checkin]) }}"
+                                                              onsubmit="const r=prompt('Void reason (required):'); if(!r){return false;} this.querySelector('input[name=reason]').value=r.trim(); if(!this.querySelector('input[name=reason]').value){return false;} return confirm('Confirm void this scan record?');">
+                                                            @csrf
+                                                            <input type="hidden" name="reason" value="">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                <i class="mdi mdi-close-circle-outline me-1"></i>Void
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        <span class="text-muted small">No action</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 @endif
             @endif
@@ -492,6 +655,83 @@
         </div>
     </div>
 
+    @if($trip->status === 'ongoing')
+        <div class="modal fade" id="incidentModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <form method="POST" action="{{ route('admin.trips.incident', $trip) }}" class="modal-content">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Report Trip Incident</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Incident Type <span class="text-danger">*</span></label>
+                                <select name="incident_type" class="form-select" required>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="breakdown">Breakdown</option>
+                                    <option value="emergency">Emergency</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Replacement Bus (Optional)</label>
+                                <select name="replacement_bus_id" class="form-select">
+                                    <option value="">No Replacement</option>
+                                    @foreach($replacementBuses as $bus)
+                                        <option value="{{ $bus->id }}">
+                                            {{ $bus->plate_number }} (Cap: {{ $bus->capacity ?? 'N/A' }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Reason / Notes</label>
+                                <input type="text" name="reason" class="form-control" maxlength="255" placeholder="Required reason" required>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Employees To Transfer</label>
+                                <small class="d-block text-muted mb-2">Leave all unchecked to auto-transfer all currently onboard employees.</small>
+                                <div class="border rounded p-2" style="max-height: 220px; overflow: auto;">
+                                    @forelse($onboardEmployees as $employee)
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input" type="checkbox" name="employee_ids[]" value="{{ $employee->id }}" id="emp-{{ $employee->id }}">
+                                            <label class="form-check-label" for="emp-{{ $employee->id }}">
+                                                {{ $employee->user?->full_name ?? ('Employee #'.$employee->id) }}
+                                            </label>
+                                        </div>
+                                    @empty
+                                        <div class="text-muted small">No onboard employees detected.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            @if(auth()->user()?->can('update_trips') || auth()->user()?->hasRole('super_admin'))
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="override_capacity" value="1" id="override-capacity">
+                                        <label class="form-check-label" for="override-capacity">
+                                            Override capacity limit (requires trip update permission)
+                                        </label>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="mdi mdi-alert"></i> Submit Incident
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
 </div>
 @endsection
 
@@ -513,14 +753,27 @@
         $(function () {
             // Datatables for check-ins tab
             @if($tab === 'checkins')
-                $('#checkins-table').DataTable({
-                    responsive: true,
-                    pageLength: 10,
-                    order: [[3, 'desc']],
-                    columnDefs: [
-                        { targets: 0, orderable: false, searchable: false }
-                    ]
-                });
+                if ($('#checkins-in-table').length) {
+                    $('#checkins-in-table').DataTable({
+                        responsive: true,
+                        pageLength: 10,
+                        order: [[4, 'desc']],
+                        columnDefs: [
+                            { targets: [0, 5], orderable: false, searchable: false }
+                        ]
+                    });
+                }
+
+                if ($('#checkins-out-table').length) {
+                    $('#checkins-out-table').DataTable({
+                        responsive: true,
+                        pageLength: 10,
+                        order: [[4, 'desc']],
+                        columnDefs: [
+                            { targets: [0, 5], orderable: false, searchable: false }
+                        ]
+                    });
+                }
             @endif
 
             // GPS playback initialization

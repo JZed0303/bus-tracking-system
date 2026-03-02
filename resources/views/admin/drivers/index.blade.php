@@ -91,7 +91,8 @@
                     <select name="status" class="form-select">
                         <option value="">All Status</option>
                         <option value="active" @selected(request('status') === 'active')>Active</option>
-                        <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
+                        <option value="on_leave" @selected(request('status') === 'on_leave')>On Leave</option>
+                        <option value="suspended" @selected(request('status') === 'suspended')>Suspended</option>
                     </select>
                 </div>
 
@@ -335,7 +336,8 @@
             $('#edit_email').val(driver.email ?? '');
             $('#edit_license_number').val(driver.license_number ?? '');
             $('#edit_phone').val(driver.phone ?? '');
-            $('#edit_status').val(driver.status ?? 'active');
+            const normalizedStatus = (driver.status === 'inactive') ? 'suspended' : (driver.status ?? 'active');
+            $('#edit_status').val(normalizedStatus);
 
             // Photo preview (requires photo_url to be publicly accessible)
             if (editDriverPond) {

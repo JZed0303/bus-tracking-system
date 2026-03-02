@@ -149,7 +149,8 @@
                                 <label class="form-label">Status <span class="text-danger">*</span></label>
                                 <select name="status" class="form-select" required>
                                     <option value="active" @selected(old('status', $driver->status) === 'active')>Active</option>
-                                    <option value="inactive" @selected(old('status', $driver->status) === 'inactive')>Inactive</option>
+                                    <option value="on_leave" @selected(old('status', $driver->status) === 'on_leave')>On Leave</option>
+                                    <option value="suspended" @selected(old('status', $driver->status) === 'suspended')>Suspended</option>
                                 </select>
                                 <div class="invalid-feedback">Status is required.</div>
                             </div>

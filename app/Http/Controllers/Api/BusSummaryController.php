@@ -29,9 +29,11 @@ class BusSummaryController extends Controller
                 'trip_id'      => $trip->id,
                 'checked_in'   => $trip->checkins()
                                       ->where('scan_type', 'checkin')
+                                      ->whereNull('voided_at')
                                       ->count(),
                 'checked_out'  => $trip->checkins()
                                       ->where('scan_type', 'checkout')
+                                      ->whereNull('voided_at')
                                       ->count(),
             ],
         ]);

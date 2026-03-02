@@ -106,7 +106,7 @@ Today’s Trips
                     <th>Started</th>
                     <th>Ended</th>
                     <th>Status</th>
-                    <th width="160">Actions</th>
+                    <th width="240">Actions</th>
                 </tr>
                 </thead>
 
@@ -158,17 +158,19 @@ Today’s Trips
                         </td>
 
                         <td>
-                            @if($trip->status === 'ongoing')
-                                <a href="{{ route('admin.live-map', ['trip' => $trip->id]) }}"
-                                   class="btn btn-sm btn-success">
-                                    <i class="mdi mdi-eye-outline"></i> Live
-                                </a>
-                            @else
+                            <div class="d-flex gap-1 flex-wrap">
+                                @if($trip->status === 'ongoing')
+                                    <a href="{{ route('admin.live-map', ['trip' => $trip->id]) }}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="mdi mdi-map-marker-radius-outline"></i> Live
+                                    </a>
+                                @endif
+
                                 <a href="{{ route('admin.trips.show', $trip) }}"
                                    class="btn btn-sm btn-secondary">
-                                    <i class="mdi mdi-eye-outline"></i> View
+                                    <i class="mdi mdi-file-document-outline"></i> Trip Details
                                 </a>
-                            @endif
+                            </div>
                         </td>
                     </tr>
                 @endforeach

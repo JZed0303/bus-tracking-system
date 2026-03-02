@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\BusSummaryController;
 use App\Http\Controllers\Api\Bus\BusDashboardController;
 use App\Http\Controllers\Api\Bus\BusChatController;
 use App\Http\Controllers\Api\Bus\BusOnboardEmployeeController;
+use App\Http\Controllers\Api\Bus\BusRouteController;
 
 use App\Http\Resources\Api\V1\BusResource;
 
@@ -119,6 +120,9 @@ Route::prefix('bus')->name('bus.')->group(function () {
         Route::post('/trip/start', [BusTripController::class, 'start'])
             ->middleware('abilities:bus:trip');
 
+        Route::post('/trip/incident', [BusTripController::class, 'reportIncident'])
+            ->middleware('abilities:bus:trip');
+
         Route::post('/trip/end', [BusTripController::class, 'end'])
             ->middleware('abilities:bus:trip');
 
@@ -139,13 +143,20 @@ Route::prefix('bus')->name('bus.')->group(function () {
  Route::post('/scan', [BusQrController::class, 'scan'])
     ->middleware('abilities:bus:scan');
 
+        Route::post('/scan/sync-offline', [BusQrController::class, 'syncOffline'])
+            ->middleware('abilities:bus:scan');
+
         /*
         |--------------------------------------------------------------------------
         | EMPLOYEES
         |--------------------------------------------------------------------------
         */
-    Route::get('/employees/onboard', [BusOnboardEmployeeController::class, 'index'])
+        Route::get('/employees/onboard', [BusOnboardEmployeeController::class, 'index'])
             ->middleware('abilities:bus:context');
+
+        Route::get('/route/details', [BusRouteController::class, 'show'])
+            ->middleware('abilities:bus:context')
+            ->name('route.details');
 
         /*
         |--------------------------------------------------------------------------

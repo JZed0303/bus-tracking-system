@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 
 use App\Http\Controllers\Admin\AuditTrailController;
+use App\Http\Controllers\Admin\DeveloperToolsController;
 
 use App\Http\Controllers\Admin\ModuleController;
 
@@ -63,8 +64,9 @@ Auth::routes();
 Route::get('/', [HomeController::class, 'dashboard'])->name('home');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
+    Route::redirect('/settings', '/settings/theme-override')->name('settings.index');
+    Route::get('/settings/theme-override', [SettingsController::class, 'themeOverride'])->name('settings.theme-override.index');
+    Route::post('/settings/theme-override', [SettingsController::class, 'updateThemeOverride'])->name('settings.theme-override.update');
 });
 
 
@@ -209,6 +211,8 @@ Route::prefix('admin')
             Route::get('/', [TripController::class, 'today'])->name('today');
             Route::get('{trip}', [TripController::class, 'show'])->name('show');
             Route::get('{trip}/gps-playback', [TripController::class, 'gpsPlayback'])->name('gps-playback');
+            Route::post('{trip}/incident', [TripController::class, 'reportIncident'])->name('incident');
+            Route::post('{trip}/checkins/{checkin}/void', [TripController::class, 'voidCheckin'])->name('checkins.void');
         });
 
         // Calendar module
@@ -216,6 +220,10 @@ Route::prefix('admin')
 
         // Live map page (ADMIN: super_admin)
         Route::get('/live-map', [LiveMapPageController::class, 'index'])->name('live-map');
+
+        // Developer tools (SUPER ADMIN ONLY)
+        Route::get('/developer-tools', [DeveloperToolsController::class, 'index'])->name('developer-tools.index');
+        Route::post('/developer-tools/run', [DeveloperToolsController::class, 'run'])->name('developer-tools.run');
 
         // Live tracking JSON endpoints (ADMIN: super_admin)
         Route::prefix('api')->name('api.')->group(function () {
@@ -301,6 +309,8 @@ Route::prefix('company')
             Route::get('/', [CompanyTripController::class, 'today'])->name('today');
             Route::get('{trip}', [CompanyTripController::class, 'show'])->name('show');
             Route::get('{trip}/gps-playback', [CompanyTripController::class, 'gpsPlayback'])->name('gps-playback');
+            Route::post('{trip}/incident', [CompanyTripController::class, 'reportIncident'])->name('incident');
+            Route::post('{trip}/checkins/{checkin}/void', [CompanyTripController::class, 'voidCheckin'])->name('checkins.void');
         });
 
         // Calendar module (company scope)

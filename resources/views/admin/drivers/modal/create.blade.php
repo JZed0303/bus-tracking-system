@@ -154,8 +154,9 @@
                         </label>
                         <div class="col-sm-9">
                             <select name="status" class="form-select" required>
-                                <option value="active" selected>Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
+                                <option value="on_leave" @selected(old('status') === 'on_leave')>On Leave</option>
+                                <option value="suspended" @selected(old('status') === 'suspended')>Suspended</option>
                             </select>
                             <div class="invalid-feedback">Status is required.</div>
                         </div>
@@ -177,34 +178,6 @@
         </div>
     </div>
 </div>
-
-{{-- ===========================
-   FILEPOND JS
-   =========================== --}}
-<script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
-<script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.js"></script>
-<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.min.js"></script>
-<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.min.js"></script>
-
-<script>
-FilePond.registerPlugin(
-    FilePondPluginImagePreview,
-    FilePondPluginFileValidateType,
-    FilePondPluginFileValidateSize
-);
-
-FilePond.create(document.querySelector('#driver_photo_pond'), {
-    allowMultiple: false,
-    storeAsFile: true,
-    imageCropAspectRatio: '1:1',
-    imageResizeTargetWidth: 160,
-    imageResizeTargetHeight: 160,
-    acceptedFileTypes: ['image/png','image/jpeg','image/webp'],
-    maxFileSize: '2MB',
-    stylePanelLayout: 'compact circle',
-    labelIdle: 'Upload photo',
-});
-</script>
 
 {{-- ===========================
    FILEPOND CIRCULAR AVATAR CSS

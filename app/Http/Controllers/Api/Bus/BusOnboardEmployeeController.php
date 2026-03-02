@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\Bus\EmployeeTripStatusResource;
 use App\Models\Assignment;
 use App\Models\Employee;
+use App\Models\TripEmployeeTransfer;
 use Illuminate\Http\Request;
 
 class BusOnboardEmployeeController extends Controller
@@ -53,13 +54,24 @@ class BusOnboardEmployeeController extends Controller
             $employees->load([
                 'checkins' => function ($q) use ($trip) {
                     $q->where('trip_id', $trip->id)
+                      ->whereNull('voided_at')
                       ->orderBy('created_at');
                 }
             ]);
         }
 
+        // NEW: include transfer rows so replacement buses can show pending transfer riders.
+        $transferRows = collect();
+        if ($trip) {
+            $transferRows = TripEmployeeTransfer::query()
+                ->where('to_trip_id', $trip->id)
+                ->whereIn('status', ['pending_confirm', 'confirmed'])
+                ->get()
+                ->keyBy('employee_id');
+        }
+
         // 3) Build rows
-        $rows = $employees->map(function ($employee) use ($trip) {
+        $rows = $employees->map(function ($employee) use ($trip, $transferRows) {
             $checkin = null;
             $checkout = null;
 
@@ -70,8 +82,12 @@ class BusOnboardEmployeeController extends Controller
 
             $status = 'not_scanned';
             if ($trip) {
+                $transfer = $transferRows->get($employee->id);
+
                 if ($checkout) $status = 'dropped';
                 elseif ($checkin) $status = 'onboard';
+                // NEW STATUS: transferred from failed bus but not yet re-scanned on replacement bus.
+                elseif ($transfer && $transfer->status === 'pending_confirm') $status = 'transferred_pending';
             }
 
             return [

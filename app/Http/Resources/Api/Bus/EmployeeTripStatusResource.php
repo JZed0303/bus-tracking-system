@@ -13,6 +13,7 @@ class EmployeeTripStatusResource extends JsonResource
                 'id'            => $this['employee']->id,
                 'employee_code' => $this['employee']->employee_code,
                 'full_name'     => $this['employee']->user?->full_name,
+                'profile_image' => $this['employee']->photo_url,
                 'department'    => $this['employee']->department, // ✅ ADD THIS
                 'company'       => $this['employee']->company?->name,
             ],
