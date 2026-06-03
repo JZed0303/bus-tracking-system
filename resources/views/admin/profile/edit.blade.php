@@ -115,36 +115,63 @@
                 @method('PUT')
 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <label class="form-label">Current Password</label>
-                        <input type="password"
-                               name="current_password"
-                               class="form-control @error('current_password') is-invalid @enderror"
-                               required>
-                        @error('current_password')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Current Password</label>
+                            <div class="input-group">
+                                <input type="password"
+                                    id="current_password"
+                                    name="current_password"
+                                    class="form-control @error('current_password') is-invalid @enderror"
+                                    required>
+                                <button class="btn btn-outline-secondary password-toggle"
+                                        type="button"
+                                        data-target="#current_password"
+                                        aria-label="Toggle current password visibility">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            @error('current_password')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">New Password</label>
-                        <input type="password"
-                               name="new_password"
-                               class="form-control @error('new_password') is-invalid @enderror"
-                               required>
-                        @error('new_password')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                        <div class="col-md-4">
+                            <label class="form-label">New Password</label>
+                            <div class="input-group">
+                                <input type="password"
+                                    id="new_password"
+                                    name="new_password"
+                                    class="form-control @error('new_password') is-invalid @enderror"
+                                    required>
+                                <button class="btn btn-outline-secondary password-toggle"
+                                        type="button"
+                                        data-target="#new_password"
+                                        aria-label="Toggle new password visibility">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            @error('new_password')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Confirm New Password</label>
+                <div class="col-md-4">
+                    <label class="form-label">Confirm New Password</label>
+                    <div class="input-group">
                         <input type="password"
-                               name="new_password_confirmation"
-                               class="form-control"
-                               required>
+                            id="new_password_confirmation"
+                            name="new_password_confirmation"
+                            class="form-control"
+                            required>
+                        <button class="btn btn-outline-secondary password-toggle"
+                                type="button"
+                                data-target="#new_password_confirmation"
+                                aria-label="Toggle confirm new password visibility">
+                            <i class="bi bi-eye"></i>
+                        </button>
                     </div>
                 </div>
+</div>
 
                 <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                     <button type="submit" class="btn btn-primary px-4">
@@ -159,5 +186,27 @@
 @endsection
 
 @section('scripts')
-<script src="{{ URL::asset('build/js/app.js') }}"></script>
+    <script src="{{ URL::asset('build/js/app.js') }}"></script>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.password-toggle').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const targetSelector = btn.getAttribute('data-target');
+                    const input = document.querySelector(targetSelector);
+                    if (!input) return;
+
+                    const icon = btn.querySelector('i');
+                    const isHidden = input.getAttribute('type') === 'password';
+
+                    input.setAttribute('type', isHidden ? 'text' : 'password');
+
+                    if (icon) {
+                        icon.classList.toggle('bi-eye', !isHidden);
+                        icon.classList.toggle('bi-eye-slash', isHidden);
+                    }
+                });
+            });
+        });
+        </script>
 @endsection
