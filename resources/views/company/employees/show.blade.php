@@ -20,6 +20,12 @@ Employee Profile
 @endsection
 
 @section('content')
+@php
+    $attendanceUrl = route('company.employees.attendance', $employee->id);
+    if (!empty($selectedScanDate)) {
+        $attendanceUrl .= '?' . http_build_query(['from' => $selectedScanDate, 'to' => $selectedScanDate]);
+    }
+@endphp
 <div class="container-fluid">
 
     <!-- PAGE HEADER -->
@@ -96,7 +102,7 @@ Employee Profile
                                         <i class="mdi mdi-bus"></i> Transport History
                                     </a>
 
-                                    <a href="{{ route('admin.employees.attendance', $employee->id) }}"
+                                    <a href="{{ $attendanceUrl }}"
                                        class="btn btn-outline-secondary btn-sm">
                                         <i class="mdi mdi-calendar-check"></i> Attendance
                                     </a>
@@ -157,7 +163,7 @@ Employee Profile
                     <div class="card mb-0">
                         <div class="card-body text-center">
                             <div class="text-muted small">Check-ins</div>
-                            <h3 class="mb-0">{{ $employee->checkins()->where('scan_type','checkin')->count() }}</h3>
+                            <h3 class="mb-0">{{ $checkinOnlyCount }}</h3>
                         </div>
                     </div>
                 </div>
@@ -166,7 +172,7 @@ Employee Profile
                     <div class="card mb-0">
                         <div class="card-body text-center">
                             <div class="text-muted small">Check-outs</div>
-                            <h3 class="mb-0">{{ $employee->checkins()->where('scan_type','checkout')->count() }}</h3>
+                            <h3 class="mb-0">{{ $checkoutOnlyCount }}</h3>
                         </div>
                     </div>
                 </div>
@@ -201,7 +207,7 @@ Employee Profile
                                     <div class="p-3 border rounded">
                                         <div class="text-muted small">Total Trips</div>
                                         <div class="fw-semibold">
-                                            {{ $employee->checkins()->distinct('trip_id')->count('trip_id') }}
+                                            {{ $tripCount }}
                                         </div>
                                         <div class="text-muted small mt-1">
                                             Based on scanned trip IDs
@@ -235,8 +241,17 @@ Employee Profile
                             <div class="mt-3">
                                 <div class="card mb-0">
                                     <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h5 class="card-title mb-0">Scan Map</h5>
-                                        <small class="text-muted">Check-in / Check-out locations</small>
+                                        <div>
+                                            <h5 class="card-title mb-0">Scan Map</h5>
+                                            <small class="text-muted">
+                                                {{ $selectedScanDate ? 'Filtered: ' . \Illuminate\Support\Carbon::parse($selectedScanDate)->format('M d, Y') : 'All dates' }}
+                                            </small>
+                                        </div>
+                                        <form method="GET" class="d-flex gap-2 align-items-center">
+                                            <input type="date" id="scan_date" name="scan_date" value="{{ $selectedScanDate }}" class="form-control form-control-sm">
+                                            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                            <a href="{{ route('company.employees.show', $employee->id) }}" class="btn btn-light btn-sm">Reset</a>
+                                        </form>
                                     </div>
                                     <div class="card-body p-0">
                                         <div id="employee-scan-map"></div>

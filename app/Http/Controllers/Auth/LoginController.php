@@ -32,6 +32,11 @@ class LoginController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        // Admin
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         // Default fallback
         return redirect('/');
     }

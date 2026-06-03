@@ -18,6 +18,9 @@
 @endsection
 
 @section('content')
+@php
+    $isArchive = $isArchive ?? false;
+@endphp
 
 <style>
     .table td { vertical-align: middle; }
@@ -72,7 +75,7 @@
 
     <div class="card company-card mb-3">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.companies.index') }}" class="row g-2 align-items-end">
+            <form method="GET" action="{{ $isArchive ? route('admin.companies.archive') : route('admin.companies.index') }}" class="row g-2 align-items-end">
                 <div class="col-md-4 col-lg-3">
                     <label class="form-label mb-1">Status</label>
                     <select name="status" class="form-select">
@@ -87,7 +90,7 @@
                     </button>
                 </div>
                 <div class="col-auto">
-                    <a href="{{ route('admin.companies.index') }}" class="btn btn-light">Reset</a>
+                    <a href="{{ $isArchive ? route('admin.companies.archive') : route('admin.companies.index') }}" class="btn btn-light">Reset</a>
                 </div>
             </form>
         </div>
@@ -101,9 +104,16 @@
                     <h4 class="card-title mb-1">Company Management</h4>
                     <p class="text-muted mb-0">Manage registered companies, contact details, routes, and employees.</p>
                 </div>
-                <a href="{{ route('admin.companies.create') }}" class="btn btn-primary btn-sm">
-                    <i class="mdi mdi-plus-circle-outline me-1"></i> Add Company
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{{ $isArchive ? route('admin.companies.index') : route('admin.companies.archive') }}" class="btn btn-light btn-sm">
+                        <i class="mdi mdi-archive-outline me-1"></i> {{ $isArchive ? 'Back to Active' : 'Archive' }}
+                    </a>
+                    @unless($isArchive)
+                        <a href="{{ route('admin.companies.create') }}" class="btn btn-primary btn-sm">
+                            <i class="mdi mdi-plus-circle-outline me-1"></i> Add Company
+                        </a>
+                    @endunless
+                </div>
             </div>
             <table id="companies-table"
                    class="table table-bordered table-hover dt-responsive nowrap align-middle"
@@ -177,12 +187,41 @@
                                     <i class="mdi mdi-eye-outline"></i>
                                 </a>
 
-                                <a href="{{ route('admin.companies.edit', $company) }}"
-                                   class="btn btn-sm"
-                                   data-bs-toggle="tooltip"
-                                   title="Edit Company">
-                                    <i class="mdi mdi-pencil-outline"></i>
-                                </a>
+                                @if($isArchive)
+                                    <form method="POST"
+                                          action="{{ route('admin.companies.restore', $company->id) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Restore this company?')">
+                                        @csrf
+                                        <button type="submit"
+                                                class="btn btn-sm"
+                                                data-bs-toggle="tooltip"
+                                                title="Restore Company">
+                                            <i class="mdi mdi-restore"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <a href="{{ route('admin.companies.edit', $company) }}"
+                                       class="btn btn-sm"
+                                       data-bs-toggle="tooltip"
+                                       title="Edit Company">
+                                        <i class="mdi mdi-pencil-outline"></i>
+                                    </a>
+
+                                    <form method="POST"
+                                          action="{{ route('admin.companies.destroy', $company) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Delete this company?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="btn btn-sm"
+                                                data-bs-toggle="tooltip"
+                                                title="Delete Company">
+                                            <i class="mdi mdi-trash-can-outline"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </td>
 

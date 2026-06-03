@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class RouteController extends Controller
 {
@@ -73,10 +74,11 @@ class RouteController extends Controller
 
         DB::transaction(function () use ($validated, $request, &$route) {
             $route = TransportRoute::create(
-                collect($validated)->except('stops_json')->toArray()
+                collect($validated)->except(['stops_json', 'route_geometry_json'])->toArray()
             );
 
             $this->syncStops($route, $request->input('stops_json'));
+            $this->persistRouteGeometry($route, $request->input('route_geometry_json'));
         });
 
         return redirect()
@@ -95,6 +97,18 @@ class RouteController extends Controller
         ]);
 
         return view('admin.routes.show', compact('route'));
+    }
+
+    public function preview(TransportRoute $route): View
+    {
+        $route->load([
+            'company',
+            'stops' => fn ($q) => $q->orderBy('stop_order'),
+        ]);
+
+        $routeGeometryJson = $this->getRouteGeometryGeoJson($route);
+
+        return view('admin.routes.preview', compact('route', 'routeGeometryJson'));
     }
 
     /* =============================
@@ -119,9 +133,10 @@ class RouteController extends Controller
             ];
         })
         ->values();
+    $routeGeometryJson = $this->getRouteGeometryGeoJson($route);
 
 
-    return view('admin.routes.edit', compact('route', 'companies', 'stopsForJs'));
+    return view('admin.routes.edit', compact('route', 'companies', 'stopsForJs', 'routeGeometryJson'));
 }
 
     /* =============================
@@ -129,14 +144,31 @@ class RouteController extends Controller
      * ============================= */
     public function update(Request $request, TransportRoute $route): RedirectResponse
     {
+        $request->validate([
+            // Optimistic lock token to avoid silent last-write-wins conflicts.
+            'route_updated_at' => ['required', 'date'],
+        ]);
+
         $validated = $this->validatedData($request);
 
         DB::transaction(function () use ($validated, $request, $route) {
-            $route->update(
-                collect($validated)->except('stops_json')->toArray()
+            // Lock row and re-check timestamp in the same transaction for race safety.
+            $lockedRoute = TransportRoute::query()->whereKey($route->id)->lockForUpdate()->firstOrFail();
+            $clientUpdatedAt = strtotime((string) $request->input('route_updated_at'));
+            $dbUpdatedAt = optional($lockedRoute->updated_at)->timestamp;
+
+            if ($dbUpdatedAt !== null && $clientUpdatedAt !== false && $dbUpdatedAt !== $clientUpdatedAt) {
+                throw ValidationException::withMessages([
+                    'route_updated_at' => 'This route was modified by another user. Refresh first to avoid overwriting changes.',
+                ]);
+            }
+
+            $lockedRoute->update(
+                collect($validated)->except(['stops_json', 'route_geometry_json'])->toArray()
             );
 
-            $this->syncStops($route, $request->input('stops_json'));
+            $this->syncStops($lockedRoute, $request->input('stops_json'));
+            $this->persistRouteGeometry($lockedRoute, $request->input('route_geometry_json'));
         });
 
         return redirect()
@@ -186,6 +218,7 @@ class RouteController extends Controller
             'status'         => ['required', 'in:active,inactive'],
 
             'stops_json'     => ['nullable', 'string'],
+            'route_geometry_json' => ['nullable', 'string'],
         ]);
     }
 
@@ -207,14 +240,98 @@ class RouteController extends Controller
             return;
         }
 
-        foreach ($stops as $stop) {
+        // Normalize stop payload and drop invalid entries.
+        $normalizedStops = collect($stops)
+            ->filter(fn ($stop) => is_array($stop))
+            ->map(function (array $stop): array {
+                return [
+                    'stop_order' => isset($stop['stop_order']) ? (int) $stop['stop_order'] : 0,
+                    'address' => isset($stop['address']) && is_string($stop['address']) ? trim($stop['address']) : null,
+                    'latitude' => isset($stop['latitude']) ? (float) $stop['latitude'] : null,
+                    'longitude' => isset($stop['longitude']) ? (float) $stop['longitude'] : null,
+                ];
+            })
+            ->filter(function (array $stop): bool {
+                return $stop['latitude'] !== null
+                    && $stop['longitude'] !== null
+                    && $stop['latitude'] >= -90 && $stop['latitude'] <= 90
+                    && $stop['longitude'] >= -180 && $stop['longitude'] <= 180;
+            })
+            ->sortBy('stop_order')
+            ->values();
+
+        $dedupedStops = [];
+        foreach ($normalizedStops as $stop) {
+            $isTooClose = collect($dedupedStops)->contains(function (array $existing) use ($stop): bool {
+                // Prevent near-duplicate stop collisions that cause route geometry glitches.
+                return $this->distanceMeters(
+                    $existing['latitude'],
+                    $existing['longitude'],
+                    $stop['latitude'],
+                    $stop['longitude']
+                ) < 8.0;
+            });
+
+            if ($isTooClose) {
+                continue;
+            }
+
+            $dedupedStops[] = $stop;
+        }
+
+        foreach (array_values($dedupedStops) as $index => $stop) {
             $route->stops()->create([
-                'stop_order' => $stop['stop_order'],
-                'address'    => $stop['address'] ?? 'Stop ' . $stop['stop_order'],
+                // Reindex order to guarantee deterministic stop sequence.
+                'stop_order' => $index + 1,
+                'address'    => $stop['address'] ?: 'Stop ' . ($index + 1),
                 'latitude'   => $stop['latitude'],
                 'longitude'  => $stop['longitude'],
             ]);
         }
+    }
+
+    private function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371000.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
+    }
+
+    private function getRouteGeometryGeoJson(TransportRoute $route): ?string
+    {
+        return DB::table('routes')
+            ->where('id', $route->id)
+            ->selectRaw('ST_AsGeoJSON(geom) as geojson')
+            ->value('geojson');
+    }
+
+    private function persistRouteGeometry(TransportRoute $route, ?string $routeGeometryJson): void
+    {
+        $payload = is_string($routeGeometryJson) ? trim($routeGeometryJson) : '';
+
+        if ($payload === '') {
+            DB::table('routes')->where('id', $route->id)->update(['geom' => null]);
+            return;
+        }
+
+        $decoded = json_decode($payload, true);
+        $coordinates = $decoded['coordinates'] ?? null;
+
+        if (($decoded['type'] ?? null) !== 'LineString' || !is_array($coordinates) || count($coordinates) < 2) {
+            DB::table('routes')->where('id', $route->id)->update(['geom' => null]);
+            return;
+        }
+
+        DB::statement(
+            'UPDATE routes SET geom = ST_SetSRID(ST_GeomFromGeoJSON(?), 4326) WHERE id = ?',
+            [$payload, $route->id]
+        );
     }
 
 }

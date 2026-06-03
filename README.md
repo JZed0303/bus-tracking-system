@@ -1,104 +1,143 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Bus Tracking System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 11 backend and admin/company web panel for real-time bus operations, trip execution, employee QR attendance, and dispatch communication.
 
-## Telemetry Retention
+## Core Modules
 
-Telemetry growth is controlled by a scheduled prune command:
+- Role-based admin and company portals
+- Fleet, route, assignment, and trip management
+- Bus-device API (Sanctum + ability-scoped tokens)
+- Live GPS ingest and active bus map
+- QR check-in/check-out with offline sync support
+- Mid-trip incident handling and replacement transfer flow
+- Bus/admin/company chat with broadcasting
+- Audit trail and telemetry pruning utilities
 
+## Tech Stack
+
+- PHP 8.2+
+- Laravel 11
+- Laravel Passport + Sanctum
+- Spatie Laravel Permission
+- PostgreSQL (with PostGIS migrations present)
+- Redis/Predis (recommended for queue/cache/broadcast scaling)
+- Vite + React/Blade frontend assets
+
+## Local Setup
+
+1. Install dependencies:
 ```bash
-php artisan transport:prune-telemetry
+composer install
+npm install
 ```
 
-Useful options:
-
+2. Configure environment:
 ```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+3. Configure DB credentials in `.env`, then run:
+```bash
+php artisan migrate --seed
+```
+
+4. Build assets:
+```bash
+npm run dev
+```
+
+5. Start app:
+```bash
+php artisan serve
+```
+
+## Operational Commands
+
+- Run tests:
+```bash
+php artisan test
+```
+
+- Prune telemetry:
+```bash
+php artisan transport:prune-telemetry
 php artisan transport:prune-telemetry --dry-run
 php artisan transport:prune-telemetry --days=21
 ```
 
-Environment variables:
+- Reset transport data (dangerous, non-production use):
+```bash
+php artisan transport:reset
+```
 
+## Key Environment Variables
+
+### Telemetry retention
 - `TRANSPORT_TELEMETRY_PRUNING_ENABLED=true`
 - `TRANSPORT_TELEMETRY_PRUNE_AFTER_DAYS=14`
 - `TRANSPORT_TELEMETRY_PRUNE_CHUNK_SIZE=5000`
 - `TRANSPORT_TELEMETRY_PRUNE_SCHEDULE=02:30`
 
-## API Limits
-
-Bus API and GPS ingest rate limits are configurable:
-
+### API limits
 - `BUS_API_RATE_LIMIT_PER_MINUTE=60`
 - `BUS_GPS_RATE_LIMIT_PER_MINUTE=60`
 
-GPS endpoint uses a dedicated limiter (`throttle:bus-gps`) in addition to authenticated bus middleware.
-
-## Company Dashboard Cache
-
-Dashboard analytics are cached to reduce repeated heavy queries:
-
+### Company dashboard cache
 - `COMPANY_DASHBOARD_ANALYTICS_CACHE_ENABLED=true`
 - `COMPANY_DASHBOARD_ANALYTICS_CACHE_TTL_SECONDS=60`
 
-## About Laravel
+## API Overview
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Authentication
+- Bus device login: `POST /api/bus/login`
+- Bus device logout: `POST /api/bus/logout`
+- Broadcasting auth: `POST /api/broadcasting/auth`
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Core bus endpoints
+- Context: `GET /api/bus/context`
+- Dashboard: `GET /api/bus/dashboard`
+- Trip start/end/incident:
+  - `POST /api/bus/trip/start`
+  - `POST /api/bus/trip/end`
+  - `POST /api/bus/trip/incident`
+- GPS ingest: `POST /api/bus/gps`
+- QR scan:
+  - `POST /api/bus/scan`
+  - `POST /api/bus/scan/sync-offline`
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## API Lifecycle and Versioning Policy
 
-## Learning Laravel
+As of **March 5, 2026**, this system serves both:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- Legacy endpoints: `/api/...`
+- Explicit v1 endpoints: `/api/v1/...`
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Example equivalents:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- `POST /api/bus/login` and `POST /api/v1/bus/login`
+- `POST /api/bus/gps` and `POST /api/v1/bus/gps`
+- `POST /api/broadcasting/auth` and `POST /api/v1/broadcasting/auth`
 
-## Laravel Sponsors
+Policy:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+- New mobile/web integrations should use `/api/v1/...`.
+- Legacy `/api/...` is maintained for backward compatibility.
+- Breaking API changes must be released in a new version namespace (`/api/v2/...`), not inside `/api/v1/...`.
+- Response contracts in `/api/v1/...` are backward compatible for additive changes only.
 
-### Premium Partners
+## Related Internal Docs
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+- Offline sync guide: `docs/OFFLINE_SYNC_API.md`
+- Transfer and assignment-leg flow: `docs/TRANSFER_AND_LEG_GUIDE.md`
+- Module management notes: `README_ModuleManagement.md`
 
-## Contributing
+## Security and Operations Notes
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- Do not expose debug endpoints in production.
+- Restrict super-admin-only routes and destructive tools by environment and policy.
+- Run migration and queue workers under managed process supervision in production.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Internal project repository. Follow your organization policy for usage and distribution.

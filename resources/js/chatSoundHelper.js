@@ -34,3 +34,47 @@ export function playChatSound() {
     console.error('[chat-sound] Exception when playing sound:', e);
   }
 }
+
+function resolveCallSoundSource() {
+  const audioEl = document.getElementById('chat-sound');
+  return audioEl?.getAttribute('src') || audioEl?.src || '/sounds/chat.mp3';
+}
+
+export function startCallSound() {
+  const src = resolveCallSoundSource();
+  if (!src) return;
+
+  const existingSound = window.__incomingCallSound;
+  if (existingSound) {
+    existingSound.currentTime = 0;
+    existingSound.loop = true;
+    existingSound.play().catch((err) => {
+      console.error('[call-sound] play() rejected:', err);
+    });
+    return;
+  }
+
+  try {
+    const sound = new Audio(src);
+    sound.volume = 1.0;
+    sound.loop = true;
+    window.__incomingCallSound = sound;
+    sound.play().catch((err) => {
+      console.error('[call-sound] play() rejected:', err);
+    });
+  } catch (error) {
+    console.error('[call-sound] Exception when playing sound:', error);
+  }
+}
+
+export function stopCallSound() {
+  const sound = window.__incomingCallSound;
+  if (!sound) return;
+
+  try {
+    sound.pause();
+    sound.currentTime = 0;
+  } catch (error) {
+    console.error('[call-sound] Exception when stopping sound:', error);
+  }
+}

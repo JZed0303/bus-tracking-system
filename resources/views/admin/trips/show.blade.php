@@ -107,6 +107,9 @@
                     <i class="mdi mdi-alert-circle-outline"></i> Report Incident
                 </button>
             @endif
+            <a href="{{ route('admin.trips.report', $trip) }}" class="btn btn-primary btn-sm me-2">
+                <i class="mdi mdi-file-chart-outline"></i> Trip Report
+            </a>
             <a href="{{ route('admin.trips.today') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="mdi mdi-arrow-left"></i> Back to Today’s Trips
             </a>
@@ -341,19 +344,118 @@
 
             {{-- CHECK-INS TAB --}}
             @if($tab === 'checkins')
+                @php
+                    $expectedEmployees = collect($expectedEmployees ?? []);
+                    $expectedPendingCount = $expectedEmployees->where('status', 'pending')->count();
+                    $expectedCheckedInCount = $expectedEmployees->where('status', 'checked_in')->count();
+                    $expectedCheckedOutCount = $expectedEmployees->where('status', 'checked_out')->count();
+                    $expectedMissedCount = $expectedEmployees->where('status', 'missed')->count();
+                @endphp
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h5 class="card-title mb-1">Employee Check-ins</h5>
                         <p class="card-subtitle text-muted mb-0">
-                            Scan history of employees boarding and alighting this trip.
+                            Expected riders and scan history for this trip.
                         </p>
                     </div>
                 </div>
 
+                @if($expectedEmployees->isNotEmpty())
+                    <div class="row g-3 mb-3">
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Expected Employees</p>
+                                <p class="trip-kpi-value">{{ $expectedEmployees->count() }}</p>
+                                <p class="mb-0 text-muted small">Scheduled or route-assigned riders</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Checked In</p>
+                                <p class="trip-kpi-value">{{ $expectedCheckedInCount }}</p>
+                                <p class="mb-0 text-muted small">Currently on board</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Checked Out</p>
+                                <p class="trip-kpi-value">{{ $expectedCheckedOutCount }}</p>
+                                <p class="mb-0 text-muted small">Ride completed</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="trip-kpi-card">
+                                <p class="trip-kpi-label">Pending / Missed</p>
+                                <p class="trip-kpi-value">{{ $expectedPendingCount + $expectedMissedCount }}</p>
+                                <p class="mb-0 text-muted small">{{ $expectedMissedCount }} marked missed</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-4">
+                        <table id="expected-checkins-table"
+                               class="table table-bordered table-striped table-hover table-sm dt-responsive mb-0"
+                               style="width:100%">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th>Employee</th>
+                                <th style="width: 160px;">Expected Pickup</th>
+                                <th>Pickup Stop</th>
+                                <th style="width: 150px;">Status</th>
+                                <th style="width: 220px;">Latest Activity</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($expectedEmployees as $index => $expected)
+                                @php
+                                    $statusBadge = match ($expected['status']) {
+                                        'checked_in' => 'success',
+                                        'checked_out' => 'secondary',
+                                        'missed' => 'danger',
+                                        default => 'warning',
+                                    };
+                                    $statusLabel = match ($expected['status']) {
+                                        'checked_in' => 'Checked In',
+                                        'checked_out' => 'Checked Out',
+                                        'missed' => 'Missed',
+                                        default => 'Pending',
+                                    };
+                                    $latestActivity = $expected['checkout']?->scan_time ?? $expected['checkin']?->scan_time;
+                                    $latestLabel = $expected['checkout']
+                                        ? 'Checked out'
+                                        : ($expected['checkin'] ? 'Checked in' : 'No scan yet');
+                                @endphp
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>
+                                        <div class="fw-semibold">{{ $expected['employee']->user?->full_name ?? '—' }}</div>
+                                        <div class="small text-muted">{{ $expected['employee']->employee_code ?? '—' }}</div>
+                                    </td>
+                                    <td>
+                                        {{ $expected['expected_pickup_time']?->format('h:iA') ?? '—' }}
+                                    </td>
+                                    <td>{{ $expected['pickup_stop'] ?? '—' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ $statusBadge }}">{{ $statusLabel }}</span>
+                                    </td>
+                                    <td>
+                                        <div>{{ $latestLabel }}</div>
+                                        <div class="small text-muted">
+                                            {{ $latestActivity ? $latestActivity->timezone('Asia/Manila')->format('M d, Y h:iA') : '—' }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+
                 @if($trip->checkins->isEmpty())
                     <div class="alert alert-light border d-flex align-items-center mb-0">
                         <i class="mdi mdi-information-outline text-muted me-2"></i>
-                        <span class="text-muted">No check-in data has been recorded for this trip.</span>
+                        <span class="text-muted">No scan records have been recorded for this trip yet.</span>
                     </div>
                 @else
                     @php
@@ -753,6 +855,14 @@
         $(function () {
             // Datatables for check-ins tab
             @if($tab === 'checkins')
+                if ($('#expected-checkins-table').length) {
+                    $('#expected-checkins-table').DataTable({
+                        responsive: true,
+                        pageLength: 10,
+                        order: [[2, 'asc'], [1, 'asc']]
+                    });
+                }
+
                 if ($('#checkins-in-table').length) {
                     $('#checkins-in-table').DataTable({
                         responsive: true,

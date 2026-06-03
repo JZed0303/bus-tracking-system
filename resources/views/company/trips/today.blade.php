@@ -51,6 +51,9 @@ Today’s Trips
                     <th>Route</th>
                     <th>Direction</th>
                     <th>Started</th>
+                    <th>Onboard</th>
+                    <th>Capacity</th>
+                    <th>Available</th>
                     <th>Status</th>
                     <th width="160">Actions</th>
                 </tr>
@@ -87,6 +90,17 @@ Today’s Trips
 
                         <td>
                             {{ $trip->actual_start_time?->format('H:i') ?? '—' }}
+                        </td>
+
+                        <td>{{ (int) ($trip->onboard_count ?? 0) }}</td>
+
+                        <td>{{ (int) ($trip->bus_capacity ?? 0) }}</td>
+
+                        <td>
+                            @php($available = (int) ($trip->available_capacity ?? 0))
+                            <span class="badge bg-{{ $available > 0 ? 'success' : 'danger' }}">
+                                {{ $available }}
+                            </span>
                         </td>
 
                         <td>

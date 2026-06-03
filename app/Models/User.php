@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
@@ -17,7 +18,7 @@ use App\Models\ChatParticipant;
 
 class User extends Authenticatable implements Auditable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, AuditableTrait;
+    use HasApiTokens, HasFactory, SoftDeletes, Notifiable, HasRoles, AuditableTrait;
 
     /* ================= BASIC CONFIG ================= */
 

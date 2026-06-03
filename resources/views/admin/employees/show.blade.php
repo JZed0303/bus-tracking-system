@@ -161,11 +161,10 @@
         : asset('build/images/users/avatar-2.jpg');
 
     $coverUrl = asset('build/images/pattern-bg.jpg');
-
-    $allCheckins = $employee->checkins;
-    $checkinOnlyCount = $allCheckins->where('scan_type', 'checkin')->count();
-    $checkoutOnlyCount = $allCheckins->where('scan_type', 'checkout')->count();
-    $tripCount = $allCheckins->pluck('trip_id')->filter()->unique()->count();
+    $attendanceUrl = route('admin.employees.attendance', $employee->id);
+    if (!empty($selectedScanDate)) {
+        $attendanceUrl .= '?' . http_build_query(['from' => $selectedScanDate, 'to' => $selectedScanDate]);
+    }
 @endphp
 
 <div class="container-fluid profile-page">
@@ -195,7 +194,7 @@
                     <a href="{{ route('admin.employees.trips', $employee->id) }}" class="btn btn-outline-primary btn-sm">
                         <i class="mdi mdi-bus me-1"></i> Transport History
                     </a>
-                    <a href="{{ route('admin.employees.attendance', $employee->id) }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ $attendanceUrl }}" class="btn btn-outline-secondary btn-sm">
                         <i class="mdi mdi-calendar-check me-1"></i> Attendance
                     </a>
                 </div>
@@ -225,8 +224,17 @@
 
             <div class="card card-soft mt-3">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Scan Map</h5>
-                    <small class="text-muted">Check-in and check-out GPS timeline</small>
+                    <div>
+                        <h5 class="card-title mb-0">Scan Map</h5>
+                        <small class="text-muted">
+                            {{ $selectedScanDate ? 'Filtered: ' . \Illuminate\Support\Carbon::parse($selectedScanDate)->format('M d, Y') : 'All dates' }}
+                        </small>
+                    </div>
+                    <form method="GET" class="d-flex gap-2 align-items-center">
+                        <input type="date" id="scan_date" name="scan_date" value="{{ $selectedScanDate }}" class="form-control form-control-sm">
+                        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                        <a href="{{ route('admin.employees.show', $employee->id) }}" class="btn btn-light btn-sm">Reset</a>
+                    </form>
                 </div>
                 <div class="map-shell">
                     <div id="employee-scan-map"></div>
@@ -235,7 +243,6 @@
                         <div class="map-legend-item"><span class="dot bg-success"></span> Check-in</div>
                         <div class="map-legend-item"><span class="dot bg-danger"></span> Check-out</div>
                         <div class="map-legend-item"><span class="dot bg-secondary"></span> Other Scan</div>
-                        <div class="map-legend-item"><span class="line"></span> Travel Path</div>
                     </div>
                 </div>
             </div>
@@ -355,12 +362,6 @@
             bounds.push([p.lat, p.lng]);
         });
 
-        const routeLine = L.polyline(
-            points.map(p => [p.lat, p.lng]),
-            { weight: 4, color: '#0d6efd', opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
-        ).addTo(map);
-
-        routeLine.bringToBack();
         map.fitBounds(bounds, { padding: [25, 25] });
         setTimeout(() => map.invalidateSize(), 200);
     })();

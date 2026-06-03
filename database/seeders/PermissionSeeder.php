@@ -19,6 +19,8 @@ class PermissionSeeder extends Seeder
             'view_company_dashboard',
         ];
 
+
+        
         /*
         |--------------------------------------------------------------------------
         | MODULE PERMISSIONS (FULL CRUD)
@@ -87,6 +89,8 @@ class PermissionSeeder extends Seeder
         $systemPermissions = [
             'view_live_tracking',
             'manage_roles',
+            'manage_user_permissions',
+            'manage_role_permissions',
         ];
 
         /*

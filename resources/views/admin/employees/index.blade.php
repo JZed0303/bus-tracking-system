@@ -105,7 +105,61 @@
         margin: 0;
         font-size: 12px;
         line-height: 1.2;
-    }
+    }.employee-grid-card {
+    transition: all .2s ease;
+    cursor: pointer;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.employee-grid-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,.08);
+}
+
+.employee-grid-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #f1f3f5;
+}
+
+.employee-grid-avatar-wrap {
+    position: relative;
+    width: 80px;
+    margin: 0 auto 1rem;
+}
+
+.employee-grid-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.employee-grid-link:hover {
+    color: inherit;
+}
+
+.employee-grid-name-link {
+    color: #1f2a37;
+    text-decoration: none;
+}
+
+.employee-grid-name-link:hover {
+    color: #1d6fdc;
+}
+
+.employee-grid-status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #22c55e;
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+}
 
     .employee-list-avatar {
         width: 42px;
@@ -144,8 +198,72 @@
         border-bottom-right-radius: .25rem !important;
     }
 
+    .employee-grid-card .employee-actions {
+        gap: 0.5rem;
+        padding: 0.45rem 0.6rem;
+        border-radius: 999px;
+        background: #f8fbff;
+        border: 1px solid #e2eaf4;
+    }
+
+    .employee-grid-card .employee-actions .btn {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 999px !important;
+        border: 1px solid #d9e3ef;
+        background: #ffffff;
+        color: #1f2a37;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+        transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .employee-grid-card .employee-actions .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    }
+
+    .employee-grid-card .employee-actions a[title="View Profile"]:hover,
+    .employee-grid-card .employee-actions a[aria-label="View Profile"]:hover {
+        background: #e8f1ff;
+        border-color: #bfd6ff;
+        color: #1d6fdc;
+    }
+
+    .employee-grid-card .employee-actions .btn-edit-employee:hover,
+    .employee-grid-card .employee-actions button[title="Edit Employee"]:hover,
+    .employee-grid-card .employee-actions button[aria-label="Edit Employee"]:hover {
+        background: #fff4db;
+        border-color: #ffd88a;
+        color: #c98500;
+    }
+
+    .employee-grid-card .employee-actions a[title="QR Code"]:hover,
+    .employee-grid-card .employee-actions a[aria-label="QR Code"]:hover {
+        background: #eef8ef;
+        border-color: #bfe3c1;
+        color: #2f9e44;
+    }
+
+    .employee-grid-card .employee-actions button[title="Delete Employee"]:hover,
+    .employee-grid-card .employee-actions button[aria-label="Delete Employee"]:hover,
+    .employee-grid-card .employee-actions button[title="Restore Employee"]:hover,
+    .employee-grid-card .employee-actions button[aria-label="Restore Employee"]:hover {
+        background: #ffe8ec;
+        border-color: #f5b8c3;
+        color: #d63348;
+    }
+
+    .employee-grid-card .employee-actions form {
+        display: inline-flex;
+        margin: 0;
+    }
+
     .employees-table td {
         vertical-align: middle;
+    }
+
+    .employee-grid-search {
+        min-width: 260px;
     }
 </style>
 
@@ -155,8 +273,11 @@
     <body data-sidebar="colored">
     @endsection
 
-    @section('content')
-        <div class="container-fluid">
+@section('content')
+    @php
+        $isArchive = $isArchive ?? false;
+    @endphp
+    <div class="container-fluid">
 
 
             <!-- FILTERS -->
@@ -194,7 +315,7 @@
 
                         <div class="col-12 text-end d-flex justify-content-end gap-2">
                             <button class="btn btn-primary">Apply Filters</button>
-                            <a href="{{ route('admin.employees.index') }}" class="btn btn-light">Reset</a>
+                            <a href="{{ $isArchive ? route('admin.employees.archive') : route('admin.employees.index') }}" class="btn btn-light">Reset</a>
                         </div>
 
                     </form>
@@ -204,16 +325,30 @@
             <!-- EMPLOYEE TABLE -->
             <div class="card employee-card">
                 <div class="card-body">
-                    <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-3">
-                        <div>
-                            <h4 class="card-title mb-1">Employee Management</h4>
-                            <p class="text-muted mb-0">View employee profiles, QR codes, attendance, and transport history.</p>
+                    <div class="d-flex align-items-start justify-content-end gap-2 flex-wrap mb-3">
+                        <div class="employee-grid-search d-none flex-grow-1" id="employeeGridSearchWrap">
+                            <input type="search"
+                                   id="employeeGridSearch"
+                                   class="form-control"
+                                   placeholder="Search employees in grid view">
                         </div>
-                        <div class="text-end">
-                            <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                                data-bs-target="#createEmployeeModal">
-                                <i class="mdi mdi-account-plus"></i> Add Employee
-                            </button>
+                        <div class="text-end d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-outline-primary" id="tableViewBtn">
+    <i class="mdi mdi-table"></i> Table
+</button>
+
+<button type="button" class="btn btn-outline-secondary" id="gridViewBtn">
+    <i class="mdi mdi-view-grid"></i> Grid
+</button>
+                            <a href="{{ $isArchive ? route('admin.employees.index') : route('admin.employees.archive') }}" class="btn btn-light">
+                                <i class="mdi mdi-archive-outline"></i> {{ $isArchive ? 'Back to Active' : 'Archive' }}
+                            </a>
+                            @unless($isArchive)
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                    data-bs-target="#createEmployeeModal">
+                                    <i class="mdi mdi-account-plus"></i> Add Employee
+                                </button>
+                            @endunless
                         </div>
                     </div>
 
@@ -295,31 +430,61 @@
                                                 <i class="mdi mdi-account-circle-outline"></i>
                                             </a>
 
-                                          <button class="btn btn-edit-employee"
-                                                data-bs-toggle="tooltip"
-                                                title="Edit Employee"
-                                                aria-label="Edit Employee"
-                                                data-id="{{ $employee->id }}"
-                                                data-first-name="{{ $employee->user->first_name }}"
-                                                data-middle-name="{{ $employee->user->middle_name }}"
-                                                data-last-name="{{ $employee->user->last_name }}"
-                                                data-email="{{ $employee->user->email }}"
-                                                data-company-id="{{ $employee->company_id }}"
-                                                data-employee-code="{{ $employee->employee_code }}"
-                                                data-department="{{ $employee->department }}"
-                                                data-status="{{ $employee->status }}"
-                                                data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
-                                                <i class="mdi mdi-pencil-outline"></i>
-                                            </button>
+                                            @if($isArchive)
+                                                <form method="POST"
+                                                      action="{{ route('admin.employees.restore', $employee->id) }}"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Restore this employee?')">
+                                                    @csrf
+                                                    <button type="submit"
+                                                        class="btn"
+                                                        data-bs-toggle="tooltip"
+                                                        title="Restore Employee"
+                                                        aria-label="Restore Employee">
+                                                        <i class="mdi mdi-restore"></i>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <button class="btn btn-edit-employee"
+                                                    data-bs-toggle="tooltip"
+                                                    title="Edit Employee"
+                                                    aria-label="Edit Employee"
+                                                    data-id="{{ $employee->id }}"
+                                                    data-first-name="{{ $employee->user->first_name }}"
+                                                    data-middle-name="{{ $employee->user->middle_name }}"
+                                                    data-last-name="{{ $employee->user->last_name }}"
+                                                    data-email="{{ $employee->user->email }}"
+                                                    data-company-id="{{ $employee->company_id }}"
+                                                    data-employee-code="{{ $employee->employee_code }}"
+                                                    data-department="{{ $employee->department }}"
+                                                    data-status="{{ $employee->status }}"
+                                                    data-photo-url="{{ $employee->photo_path ? asset('storage/'.$employee->photo_path) : '' }}">
+                                                    <i class="mdi mdi-pencil-outline"></i>
+                                                </button>
 
+                                                <a href="{{ route('admin.employees.qr', $employee->id) }}"
+                                                    class="btn"
+                                                    data-bs-toggle="tooltip"
+                                                    title="View QR"
+                                                    aria-label="View QR">
+                                                    <i class="mdi mdi-qrcode"></i>
+                                                </a>
 
-                                            <a href="{{ route('admin.employees.qr', $employee->id) }}"
-                                                class="btn"
-                                                data-bs-toggle="tooltip"
-                                                title="View QR"
-                                                aria-label="View QR">
-                                                <i class="mdi mdi-qrcode"></i>
-                                            </a>
+                                                <form method="POST"
+                                                      action="{{ route('admin.employees.destroy', $employee->id) }}"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Delete this employee?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        class="btn"
+                                                        data-bs-toggle="tooltip"
+                                                        title="Delete Employee"
+                                                        aria-label="Delete Employee">
+                                                        <i class="mdi mdi-trash-can-outline"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
 
                                     </td>
@@ -329,12 +494,16 @@
 
                     </table>
 
+<div id="employee-grid-view" class="row mt-3 d-none"></div>
+
                 </div>
             </div>
 
         </div>
-        @include('admin.employees.modal.create')
-        @include('admin.employees.modal.edit')
+        @unless($isArchive)
+            @include('admin.employees.modal.create')
+            @include('admin.employees.modal.edit')
+        @endunless
     @endsection
 
     @section('scripts')
@@ -357,17 +526,114 @@
             $(function() {
 
                 // DataTable
-                $('#employees-table').DataTable({
-                    responsive: true,
-                    pageLength: 10,
-                    stateSave: true,
-                    order: [
-                        [1, 'asc']
-                    ],
-                    columnDefs: [
-                        { targets: [0, 6], orderable: false }
-                    ]
-                });
+           const employeeTable = $('#employees-table').DataTable({
+    responsive: true,
+    pageLength: 10,
+    stateSave: true,
+    order: [[1, 'asc']],
+    columnDefs: [
+        { targets: [0, 6], orderable: false }
+    ]
+});
+
+function renderEmployeeGrid() {
+
+    let grid = $('#employee-grid-view');
+    grid.html('');
+
+    employeeTable.rows({ search: 'applied' }).every(function () {
+
+        let rowNode = $(this.node());
+
+        let image = rowNode.find('.employee-list-avatar').attr('src');
+
+        let employeeName = rowNode.find('strong').text();
+
+        let employeeCode = rowNode.find('small').text();
+
+        let company = rowNode.find('td:eq(2)').text();
+
+        let department = rowNode.find('td:eq(3)').text();
+
+        let status = rowNode.find('td:eq(4)').text().trim();
+
+        let actions = rowNode.find('td:eq(6)').html();
+
+        let profileUrl = rowNode.find('td:eq(6) a[title="View Profile"]').attr('href') || '#';
+
+        let gridActions = $('<div>').html(actions);
+        gridActions.find('a[title="View Profile"], a[aria-label="View Profile"]').remove();
+        actions = gridActions.html();
+
+        grid.append(`
+            <div class="col-lg-4 col-md-6 mb-1">
+
+                <div class="card employee-grid-card border-0 shadow-sm">
+
+                    <div class="card-body text-center">
+
+                        <a href="${profileUrl}" class="employee-grid-link">
+                            <div class="employee-grid-avatar-wrap">
+                                <img src="${image}" class="employee-grid-avatar">
+                                ${status.toLowerCase() === 'active'
+                                    ? '<span class="employee-grid-status-dot" title="Active"></span>'
+                                    : ''}
+                            </div>
+                        </a>
+                        
+                        <h5 class="mb-1">
+                            <a href="${profileUrl}" class="employee-grid-name-link">${employeeName}</a>
+                        </h5>
+
+                        <div class="text-muted small mb-2">
+                            ${employeeCode} | ${company}
+                        </div>
+
+                        <div class="d-flex justify-content-center">
+                            ${actions}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `);
+
+    });
+
+}
+
+$('#gridViewBtn').on('click', function () {
+
+    $('#employees-table_wrapper').hide();
+
+    $('#employee-grid-view').removeClass('d-none');
+
+    $('#employeeGridSearchWrap').removeClass('d-none');
+
+    renderEmployeeGrid();
+
+});
+
+$('#tableViewBtn').on('click', function () {
+
+    $('#employee-grid-view').addClass('d-none');
+
+    $('#employees-table_wrapper').show();
+
+    $('#employeeGridSearchWrap').addClass('d-none');
+
+});
+
+$('#employeeGridSearch').on('input', function () {
+    const value = $(this).val();
+    employeeTable.search(value).draw();
+
+    if (!$('#employee-grid-view').hasClass('d-none')) {
+        renderEmployeeGrid();
+    }
+});
 
                 $('#select-all').on('change', function() {
                     $('.row-checkbox').prop('checked', this.checked);

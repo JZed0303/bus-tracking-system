@@ -20,6 +20,11 @@ class RoleSeeder extends Seeder
             'guard_name' => 'web',
         ]);
 
+        $admin = Role::firstOrCreate([
+            'name' => 'admin',
+            'guard_name' => 'web',
+        ]);
+
         $employee = Role::firstOrCreate([
             'name' => 'employee',
             'guard_name' => 'web',
@@ -36,6 +41,13 @@ class RoleSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
         $superAdmin->syncPermissions(Permission::all());
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin: full platform access except super-admin-only tools/routes
+        |--------------------------------------------------------------------------
+        */
+        $admin->syncPermissions(Permission::all());
 
         /*
         |--------------------------------------------------------------------------

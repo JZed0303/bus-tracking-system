@@ -38,6 +38,9 @@ Trip Details
                     <i class="mdi mdi-alert-circle-outline"></i> Report Incident
                 </button>
             @endif
+            <a href="{{ route('company.trips.report', $trip) }}" class="btn btn-primary btn-sm me-2">
+                <i class="mdi mdi-file-chart-outline"></i> Trip Report
+            </a>
             <a href="{{ route('company.trips.today') }}" class="btn btn-light btn-sm">
                 <i class="mdi mdi-arrow-left"></i> Back to Trips
             </a>
@@ -156,10 +159,68 @@ Trip Details
 
             {{-- CHECKINS --}}
           @if($tab === 'checkins')
+    @php
+        $expectedEmployees = collect($expectedEmployees ?? []);
+    @endphp
     <h4 class="card-title mb-3">Employee Check-ins</h4>
 
+    @if($expectedEmployees->isNotEmpty())
+        <div class="table-responsive mb-4">
+            <table id="expected-checkins-table"
+                   class="table table-bordered table-striped table-sm dt-responsive nowrap"
+                   style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Expected Pickup</th>
+                        <th>Pickup Stop</th>
+                        <th>Status</th>
+                        <th>Latest Activity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach($expectedEmployees as $expected)
+                    @php
+                        $statusBadge = match ($expected['status']) {
+                            'checked_in' => 'success',
+                            'checked_out' => 'secondary',
+                            'missed' => 'danger',
+                            default => 'warning',
+                        };
+                        $statusLabel = match ($expected['status']) {
+                            'checked_in' => 'Checked In',
+                            'checked_out' => 'Checked Out',
+                            'missed' => 'Missed',
+                            default => 'Pending',
+                        };
+                        $latestActivity = $expected['checkout']?->scan_time ?? $expected['checkin']?->scan_time;
+                        $latestLabel = $expected['checkout']
+                            ? 'Checked out'
+                            : ($expected['checkin'] ? 'Checked in' : 'No scan yet');
+                    @endphp
+                    <tr>
+                        <td>
+                            {{ $expected['employee']->user?->full_name ?? '—' }}
+                            <div class="small text-muted">{{ $expected['employee']->employee_code ?? '—' }}</div>
+                        </td>
+                        <td>{{ $expected['expected_pickup_time']?->format('h:iA') ?? '—' }}</td>
+                        <td>{{ $expected['pickup_stop'] ?? '—' }}</td>
+                        <td><span class="badge bg-{{ $statusBadge }}">{{ $statusLabel }}</span></td>
+                        <td>
+                            {{ $latestLabel }}
+                            <div class="small text-muted">
+                                {{ $latestActivity ? $latestActivity->timezone(config('app.timezone'))->format('M d, Y H:i') : '—' }}
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     @if($trip->checkins->isEmpty())
-        <p class="text-muted mb-0">No check-ins recorded.</p>
+        <p class="text-muted mb-0">No scan records recorded for this trip yet.</p>
     @else
         <table id="checkins-table"
                class="table table-bordered table-striped table-sm dt-responsive nowrap"
@@ -341,14 +402,24 @@ Trip Details
 <script>
 $(function () {
     @if($tab === 'checkins')
-        $('#checkins-table').DataTable({
-            responsive: true,
-            pageLength: 10,
-            order: [[3, 'desc']],
-            columnDefs: [
-                { targets: 4, orderable: false, searchable: false }
-            ]
-        });
+        if ($('#expected-checkins-table').length) {
+            $('#expected-checkins-table').DataTable({
+                responsive: true,
+                pageLength: 10,
+                order: [[1, 'asc'], [0, 'asc']]
+            });
+        }
+
+        if ($('#checkins-table').length) {
+            $('#checkins-table').DataTable({
+                responsive: true,
+                pageLength: 10,
+                order: [[3, 'desc']],
+                columnDefs: [
+                    { targets: 4, orderable: false, searchable: false }
+                ]
+            });
+        }
     @endif
 });
 </script>

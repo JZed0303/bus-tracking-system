@@ -8,29 +8,33 @@ class EmployeeTripStatusResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $employee = $this['employee'];
+        $checkin = $this['checkin'];
+        $checkout = $this['checkout'];
+
         return [
             'employee' => [
-                'id'            => $this['employee']->id,
-                'employee_code' => $this['employee']->employee_code,
-                'full_name'     => $this['employee']->user?->full_name,
-                'profile_image' => $this['employee']->photo_url,
-                'department'    => $this['employee']->department, // ✅ ADD THIS
-                'company'       => $this['employee']->company?->name,
+                'id' => (int) $employee->id,
+                'employee_code' => (string) ($employee->employee_code ?? 'N/A'),
+                'full_name' => (string) ($employee->user?->full_name ?? 'N/A'),
+                'profile_image' => $employee->photo_url,
+                'department' => (string) ($employee->department ?? 'N/A'),
+                'company' => (string) ($employee->company?->name ?? 'N/A'),
             ],
 
-            'checkin' => $this['checkin'] ? [
-                'time'      => $this['checkin']->scan_time,
-                'latitude'  => $this['checkin']->scan_lat,
-                'longitude' => $this['checkin']->scan_lng,
+            'checkin' => $checkin ? [
+                'time' => optional($checkin->scan_time)?->toIso8601String(),
+                'latitude' => $checkin->scan_lat !== null ? (float) $checkin->scan_lat : null,
+                'longitude' => $checkin->scan_lng !== null ? (float) $checkin->scan_lng : null,
             ] : null,
 
-            'checkout' => $this['checkout'] ? [
-                'time'      => $this['checkout']->scan_time,
-                'latitude'  => $this['checkout']->scan_lat,
-                'longitude' => $this['checkout']->scan_lng,
+            'checkout' => $checkout ? [
+                'time' => optional($checkout->scan_time)?->toIso8601String(),
+                'latitude' => $checkout->scan_lat !== null ? (float) $checkout->scan_lat : null,
+                'longitude' => $checkout->scan_lng !== null ? (float) $checkout->scan_lng : null,
             ] : null,
 
-            'status' => $this['status'],
+            'status' => (string) ($this['status'] ?? 'not_scanned'),
         ];
     }
 }

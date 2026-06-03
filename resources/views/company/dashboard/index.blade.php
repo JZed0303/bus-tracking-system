@@ -1,55 +1,136 @@
 @extends('layouts.master')
-@section('title')
-    Starter page
-@endsection
-@section('page-title')
-    Starter page
-@endsection
+@section('title', 'Company Dashboard')
+@section('page-title', 'Company Dashboard')
 @section('css')
 <style>
-    .kpi-highlight-card {
-        border: 0;
-        border-radius: 12px;
-        color: #fff;
-        background: linear-gradient(135deg, #b61f1f 0%, #de6b28 100%)!important;
-        box-shadow: 0 6px 16px rgba(182, 31, 31, 0.22);
+    :root {
+        --hm-ink-900: #101828;
+        --hm-ink-700: #344054;
+        --hm-ink-500: #667085;
+        --hm-line: #e4e7ec;
+        --hm-surface: #ffffff;
+        --hm-soft: #f8fafc;
+        --hm-brand: #0f5dbb;
+        --hm-brand-soft: #e7f0ff;
+        --hm-success: #12b76a;
     }
 
-    .kpi-highlight-card .kpi-label {
-        font-size: .72rem;
-        font-weight: 600;
-        text-transform: none;
-        opacity: .95;
-        margin-bottom: .35rem;
+    .hm-context-card {
+        border: 1px solid var(--hm-line);
+        border-radius: 0.9rem;
+        background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+        box-shadow: 0 12px 28px rgba(16, 24, 40, 0.06);
     }
 
-    .kpi-highlight-card .kpi-value {
-        font-size: 1.8rem;
-        line-height: 1;
-        font-weight: 700;
-        margin-bottom: .25rem;
+    .hm-kpi-card {
+        position: relative;
+        overflow: hidden;
+        background-color: #ffffff;
+        border: 1px solid rgba(225, 230, 238, 0.95);
+        border-left: 2px solid #ef4444;
+        box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+        transition: transform 220ms ease, box-shadow 220ms ease, border-left-width 220ms ease;
     }
 
-    .kpi-highlight-card .kpi-meta {
-        font-size: .72rem;
-        opacity: .9;
-        margin: 0;
+    .hm-kpi-card:hover {
+        transform: translateY(-4px);
+        border-left-width: 3px;
+        box-shadow: 0 16px 34px rgba(16, 24, 40, 0.12);
     }
 
-    .kpi-highlight-card .kpi-icon-wrap {
-        width: 2.25rem;
-        height: 2.25rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, .2);
+    .hm-kpi-label {
+        margin-bottom: 0.25rem;
+        font-size: 0.78rem;
+        letter-spacing: 0.02em;
+        color: #667085;
+    }
+
+    .hm-kpi-value {
+        margin-bottom: 0.2rem;
+        color: #101828;
+    }
+
+    .hm-kpi-meta {
+        margin-bottom: 0;
+        font-size: 0.76rem;
+        color: #6b7280;
+    }
+
+    .hm-kpi-icon {
+        width: 2.9rem;
+        height: 2.9rem;
+        border-radius: 0.85rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid rgba(255, 255, 255, .35);
+        color: #fff;
+        font-size: 1.3rem;
+        background: #ef4444;
+        box-shadow: 0 10px 20px rgba(239, 68, 68, 0.22);
     }
 
-    .kpi-highlight-card .kpi-icon-wrap i {
-        font-size: 1.05rem;
-        color: #fff;
+    .hm-ops-card {
+        border: 1px solid var(--hm-line);
+        border-radius: 0.9rem;
+        background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+        box-shadow: 0 12px 28px rgba(16, 24, 40, 0.06);
+    }
+
+    .hm-ops-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .hm-ops-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.28rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: var(--hm-brand-soft);
+        color: var(--hm-brand);
+    }
+
+    .hm-ops-title {
+        margin: 0;
+        color: var(--hm-ink-900);
+        font-size: 1.02rem;
+        font-weight: 700;
+    }
+
+    .hm-ops-subtitle {
+        margin: 0.2rem 0 0;
+        color: var(--hm-ink-500);
+        font-size: 0.78rem;
+    }
+
+    .hm-ops-metric {
+        color: var(--hm-brand);
+        font-size: 2.15rem;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.45rem;
+    }
+
+    .hm-ops-note {
+        margin: 0;
+        color: var(--hm-ink-500);
+        font-size: 0.8rem;
+    }
+
+    .hm-chart-card {
+        border: 1px solid var(--hm-line);
+        border-radius: 0.9rem;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(16, 24, 40, 0.06);
     }
 </style>
 @endsection
@@ -58,10 +139,11 @@
 @endsection
 
 @section('content')
+<div class="container-fluid">
     @if(!empty($isSuperAdmin))
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card border-0 shadow-sm">
+                <div class="card hm-context-card">
                     <div class="card-body">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                             <div>
@@ -129,20 +211,28 @@
                     'meta'  => 'Company network in service',
                     'icon'  => 'mdi-bus',
                 ],
+                [
+                    'label' => 'Active Routes',
+                    'value' => $activeRoutes,
+                    'meta'  => 'Routes currently available',
+                    'icon'  => 'mdi-map-marker-path',
+                ],
             ];
         @endphp
 
         @foreach($kpis as $kpi)
-            <div class="col-xl-4 col-md-6">
-                <div class="card kpi-highlight-card h-100">
-                    <div class="card-body d-flex justify-content-between align-items-start">
-                        <div>
-                            <p class="kpi-label">{{ $kpi['label'] }}</p>
-                            <h3 class="kpi-value">{{ number_format($kpi['value']) }}</h3>
-                            <p class="kpi-meta">{{ $kpi['meta'] }}</p>
-                        </div>
-                        <div class="kpi-icon-wrap">
-                            <i class="mdi {{ $kpi['icon'] }}"></i>
+            <div class="col-xl-3 col-md-6">
+                <div class="card hm-kpi-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="hm-kpi-label">{{ $kpi['label'] }}</p>
+                                <h3 class="hm-kpi-value">{{ number_format($kpi['value']) }}</h3>
+                                <p class="hm-kpi-meta">{{ $kpi['meta'] }}</p>
+                            </div>
+                            <div class="hm-kpi-icon">
+                                <i class="mdi {{ $kpi['icon'] }}"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -153,9 +243,18 @@
     {{-- ===================== DAILY OPERATIONS ===================== --}}
     <div class="row g-3 mb-4">
         <div class="col-xl-4 col-md-6">
-            <div class="card h-100">
+            <div class="card hm-ops-card h-100">
                 <div class="card-body">
-                    <small class="text-muted">Trips Today</small>
+                    <div class="hm-ops-header">
+                        <div>
+                            <h6 class="hm-ops-title">Trips Today</h6>
+                            <p class="hm-ops-subtitle">Operational snapshot by status</p>
+                        </div>
+                        <span class="hm-ops-badge">
+                            <i class="mdi mdi-calendar-check-outline"></i>
+                            Daily
+                        </span>
+                    </div>
                     <div class="mt-2">
                         <div class="d-flex justify-content-between">
                             <span><i class="mdi mdi-bus-clock me-1"></i> Ongoing</span>
@@ -179,26 +278,44 @@
         </div>
 
         <div class="col-xl-4 col-md-6">
-            <div class="card h-100">
+            <div class="card hm-ops-card h-100">
                 <div class="card-body">
-                    <small class="text-muted">Live Buses</small>
-                    <h3 class="mb-1 text-success">{{ number_format($onlineBusesCount) }}</h3>
-                    <small class="text-muted">
+                    <div class="hm-ops-header">
+                        <div>
+                            <h6 class="hm-ops-title">Live Buses</h6>
+                            <p class="hm-ops-subtitle">Current active fleet status</p>
+                        </div>
+                        <span class="hm-ops-badge">
+                            <i class="mdi mdi-access-point"></i>
+                            Realtime
+                        </span>
+                    </div>
+                    <div class="hm-ops-metric text-success">{{ number_format($onlineBusesCount) }}</div>
+                    <p class="hm-ops-note">
                         Out of {{ number_format($assignedBusesCount) }} assigned buses currently in operation
-                    </small>
+                    </p>
                 </div>
             </div>
         </div>
 
         <div class="col-xl-4 col-md-12">
-            <div class="card h-100">
+            <div class="card hm-ops-card h-100">
                 <div class="card-body">
-                    <small class="text-muted">Trip Completion Today</small>
-                    <h3 class="mb-1">{{ $tripCompletionPercent }}%</h3>
-                    <small class="{{ $tripCompletionPercent >= 75 ? 'text-success' : 'text-warning' }}">
+                    <div class="hm-ops-header">
+                        <div>
+                            <h6 class="hm-ops-title">Trip Completion</h6>
+                            <p class="hm-ops-subtitle">Today's completion health</p>
+                        </div>
+                        <span class="hm-ops-badge">
+                            <i class="mdi mdi-target"></i>
+                            KPI
+                        </span>
+                    </div>
+                    <div class="hm-ops-metric">{{ $tripCompletionPercent }}%</div>
+                    <p class="{{ $tripCompletionPercent >= 75 ? 'text-success' : 'text-warning' }}">
                         <i class="mdi {{ $tripCompletionPercent >= 75 ? 'mdi-arrow-up' : 'mdi-alert-outline' }}"></i>
                         {{ $tripCompletionPercent >= 75 ? 'Healthy completion trend' : 'Needs monitoring today' }}
-                    </small>
+                    </p>
                 </div>
             </div>
         </div>
@@ -206,7 +323,7 @@
 
     <div class="row g-3 mb-4">
         <div class="col-xl-4 col-md-6">
-            <div class="card h-100">
+            <div class="card hm-ops-card h-100">
                 <div class="card-body">
                     <small class="text-muted">Incidents Today</small>
                     <h3 class="mb-1 text-danger">{{ number_format($incidentsTodayCount) }}</h3>
@@ -216,7 +333,7 @@
         </div>
 
         <div class="col-xl-4 col-md-6">
-            <div class="card h-100">
+            <div class="card hm-ops-card h-100">
                 <div class="card-body">
                     <small class="text-muted">Pending Transfer Confirmations</small>
                     <h3 class="mb-1 text-warning">{{ number_format($pendingTransferConfirmationsCount) }}</h3>
@@ -228,7 +345,7 @@
         </div>
 
         <div class="col-xl-4 col-md-12">
-            <div class="card h-100">
+            <div class="card hm-ops-card h-100">
                 <div class="card-body">
                     <small class="text-muted">Unresolved Reassignment Cases</small>
                     <h3 class="mb-1 {{ $unresolvedReassignmentCasesCount > 0 ? 'text-danger' : 'text-success' }}">
@@ -243,7 +360,7 @@
     {{-- ===================== ANALYTICS (startpage chart block pattern) ===================== --}}
     <div class="row g-3">
         <div class="col-xl-6">
-            <div class="card h-100">
+            <div class="card hm-chart-card h-100">
                 <div class="card-header">
                     <h6 class="mb-0">
                         <i class="mdi mdi-chart-line me-1"></i>
@@ -257,7 +374,7 @@
         </div>
 
         <div class="col-xl-6">
-            <div class="card h-100">
+            <div class="card hm-chart-card h-100">
                 <div class="card-header">
                     <h6 class="mb-0">
                         <i class="mdi mdi-account-multiple me-1"></i>
@@ -271,7 +388,7 @@
         </div>
 
         <div class="col-xl-6">
-            <div class="card h-100">
+            <div class="card hm-chart-card h-100">
                 <div class="card-header">
                     <h6 class="mb-0">
                         <i class="mdi mdi-map me-1"></i>
@@ -285,7 +402,7 @@
         </div>
 
         <div class="col-xl-6">
-            <div class="card h-100">
+            <div class="card hm-chart-card h-100">
                 <div class="card-header">
                     <h6 class="mb-0">
                         <i class="mdi mdi-clock-alert me-1"></i>
@@ -302,7 +419,7 @@
     {{-- ===================== FLEET TABLE ===================== --}}
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
+            <div class="card hm-chart-card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Assigned Fleet Overview</h5>
                 </div>
@@ -355,6 +472,7 @@
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 @section('scripts')

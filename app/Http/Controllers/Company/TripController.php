@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Events\BusIncidentReported;
 use App\Http\Controllers\Controller;
 use App\Models\Bus;
 use App\Models\Checkin;
 use App\Models\Employee;
+use App\Models\EmployeeSchedule;
 use App\Models\Trip;
 use App\Models\TripEmployeeTransfer;
 use App\Support\AuditTrail;
+use App\Support\TripReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Excel as ExcelWriter;
 
 class TripController extends Controller
 {
@@ -70,6 +74,36 @@ class TripController extends Controller
             ->latest('actual_start_time')
             ->get();
 
+        $onboardCounts = collect();
+        if ($trips->isNotEmpty()) {
+            $tripIds = $trips->pluck('id')->values();
+
+            $onboardCounts = DB::table('checkins as c')
+                ->selectRaw('c.trip_id, COUNT(DISTINCT c.employee_id) as onboard_count')
+                ->whereIn('c.trip_id', $tripIds)
+                ->where('c.scan_type', 'checkin')
+                ->whereNull('c.voided_at')
+                ->whereNotExists(function ($q) {
+                    $q->selectRaw('1')
+                        ->from('checkins as c2')
+                        ->whereColumn('c2.trip_id', 'c.trip_id')
+                        ->whereColumn('c2.employee_id', 'c.employee_id')
+                        ->where('c2.scan_type', 'checkout')
+                        ->whereNull('c2.voided_at');
+                })
+                ->groupBy('c.trip_id')
+                ->pluck('onboard_count', 'trip_id');
+        }
+
+        foreach ($trips as $trip) {
+            $onboardCount = (int) ($onboardCounts[$trip->id] ?? 0);
+            $capacity = (int) ($trip->assignment?->bus?->capacity ?? 0);
+
+            $trip->setAttribute('onboard_count', $onboardCount);
+            $trip->setAttribute('bus_capacity', $capacity);
+            $trip->setAttribute('available_capacity', max(0, $capacity - $onboardCount));
+        }
+
         return view('company.trips.today', compact('trips'));
     }
 
@@ -86,7 +120,13 @@ class TripController extends Controller
                 $q->where('company_id', $companyId);
             })
             ->latest('actual_start_time')
-            ->firstOrFail();
+            ->first();
+
+        if (!$trip) {
+            return redirect()
+                ->route('company.trips.today')
+                ->with('info', 'No active trips.');
+        }
 
         return redirect()
             ->route('company.trips.show', $trip)
@@ -100,14 +140,7 @@ class TripController extends Controller
     {
         $this->authorizeTrip($trip);
 
-        $trip->load([
-            'assignment.bus',
-            'assignment.route',
-            'assignment.driver.user',
-            'checkins' => fn ($q) => $q
-                ->with('employee.user', 'voidedByUser')
-                ->orderBy('scan_time', 'asc'),
-        ]);
+        app(TripReportService::class)->prepareTrip($trip);
 
         $today = now('Asia/Manila')->toDateString();
         $companyId = $this->companyId();
@@ -172,7 +205,125 @@ class TripController extends Controller
             ->with('employee.user')
             ->get();
 
-        return view('company.trips.show', compact('trip', 'onboardEmployees', 'replacementBuses', 'pendingTransferEmployees'));
+        $expectedEmployees = $this->buildExpectedEmployeeStatuses($trip, $companyId);
+
+        return view('company.trips.show', compact('trip', 'onboardEmployees', 'replacementBuses', 'pendingTransferEmployees', 'expectedEmployees'));
+    }
+
+    public function report(Trip $trip): View
+    {
+        $this->authorizeTrip($trip);
+
+        $report = app(TripReportService::class)->buildReport($trip, $this->companyId());
+
+        return view('reports.trip', [
+            'report' => $report,
+            'trip' => $trip,
+            'scope' => 'company',
+            'routePrefix' => 'company.trips',
+            'backUrl' => route('company.trips.show', $trip),
+        ]);
+    }
+
+    public function exportReport(Request $request, Trip $trip, string $type)
+    {
+        $this->authorizeTrip($trip);
+
+        $service = app(TripReportService::class);
+        $report = $service->buildReport($trip, $this->companyId());
+
+        if (in_array($type, ['excel', 'xlsx'], true)) {
+            return $service->exportExcel($report);
+        }
+
+        if ($type === 'csv') {
+            return $service->exportExcel($report, ExcelWriter::CSV);
+        }
+
+        if ($type === 'pdf') {
+            return $service->exportPdf($report, $request->boolean('preview'));
+        }
+
+        abort(404);
+    }
+
+    private function buildExpectedEmployeeStatuses(Trip $trip, int $companyId)
+    {
+        $routeId = (int) optional($trip->assignment)->route_id;
+        $tripDate = $trip->trip_date?->toDateString();
+
+        $scanGroups = $trip->checkins
+            ->whereNull('voided_at')
+            ->sortBy('scan_time')
+            ->groupBy('employee_id');
+
+        $scheduledEmployees = collect();
+
+        if ($companyId > 0 && $routeId > 0 && $tripDate) {
+            $scheduledEmployees = EmployeeSchedule::query()
+                ->with(['employee.user', 'employee.pickupStop.stop'])
+                ->where('company_id', $companyId)
+                ->where('route_id', $routeId)
+                ->whereDate('schedule_date', $tripDate)
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('expected_pickup_time')
+                ->get();
+        }
+
+        if ($scheduledEmployees->isEmpty() && $companyId > 0 && $routeId > 0) {
+            return Employee::query()
+                ->with(['user', 'pickupStop.stop'])
+                ->where('company_id', $companyId)
+                ->whereHas('pickupStop.stop', fn ($q) => $q->where('route_id', $routeId))
+                ->orderBy('employee_code')
+                ->get()
+                ->map(function (Employee $employee) use ($scanGroups) {
+                    $scans = $scanGroups->get($employee->id, collect());
+                    $checkin = $scans->where('scan_type', 'checkin')->last();
+                    $checkout = $scans->where('scan_type', 'checkout')->last();
+
+                    return [
+                        'employee' => $employee,
+                        'expected_pickup_time' => null,
+                        'pickup_stop' => $employee->pickupStop?->stop?->address,
+                        'schedule_status' => 'scheduled',
+                        'checkin' => $checkin,
+                        'checkout' => $checkout,
+                        'status' => $checkout ? 'checked_out' : ($checkin ? 'checked_in' : 'pending'),
+                    ];
+                })
+                ->values();
+        }
+
+        return $scheduledEmployees
+            ->groupBy('employee_id')
+            ->map(function ($rows) use ($scanGroups) {
+                $schedule = $rows->sortBy('expected_pickup_time')->first();
+                $employee = $schedule->employee;
+                $scans = $scanGroups->get($employee->id, collect());
+                $checkin = $scans->where('scan_type', 'checkin')->last();
+                $checkout = $scans->where('scan_type', 'checkout')->last();
+
+                $status = match (true) {
+                    (bool) $checkout => 'checked_out',
+                    (bool) $checkin => 'checked_in',
+                    $schedule->status === 'missed' => 'missed',
+                    default => 'pending',
+                };
+
+                return [
+                    'employee' => $employee,
+                    'expected_pickup_time' => $schedule->expected_pickup_time,
+                    'pickup_stop' => $employee->pickupStop?->stop?->address,
+                    'schedule_status' => $schedule->status ?? 'scheduled',
+                    'checkin' => $checkin,
+                    'checkout' => $checkout,
+                    'status' => $status,
+                ];
+            })
+            ->values()
+            ->sortBy(fn ($row) => $row['expected_pickup_time'] ? $row['expected_pickup_time']->format('H:i') : '99:99')
+            ->values();
     }
 
     /**
@@ -284,6 +435,7 @@ class TripController extends Controller
                 'status' => 'cancelled',
                 'actual_end_time' => now(),
                 'ended_reason' => $validated['incident_type'],
+                'incident_reason' => $reason,
                 'incident_reported_at' => now(),
             ]);
 
@@ -372,6 +524,19 @@ class TripController extends Controller
             ],
             tags: 'incident,transfer'
         );
+
+        event(new BusIncidentReported([
+            'trip_id' => (int) $trip->id,
+            'bus_id' => (int) ($trip->assignment?->bus_id ?? 0),
+            'plate_number' => $trip->assignment?->bus?->plate_number,
+            'company_id' => (int) ($trip->assignment?->company_id ?? 0),
+            'company' => $trip->assignment?->company?->name,
+            'route' => $trip->assignment?->route?->name,
+            'incident_type' => $trip->ended_reason,
+            'reason' => $trip->incident_reason,
+            'reported_at' => optional($trip->incident_reported_at)->toIso8601String(),
+            'status' => $trip->status,
+        ]));
 
         return back()->with('success', 'Incident has been recorded successfully.');
     }

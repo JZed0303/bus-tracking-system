@@ -1,9 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import LiveBusMap from './pages/Admin/LiveBusMap';
+import VideoCallPage from './pages/Admin/VideoCallPage';
 
 import './bootstrap';
 import './chat-global-listener';
+import './realtime-notifications';
 
 import { initGlobalPresence } from './presence-global';
 initGlobalPresence();
@@ -35,7 +37,17 @@ if (typeof window !== 'undefined') {
 }
 
 const el = document.getElementById('admin-live-map');
+const videoCallEl = document.getElementById('admin-video-call-root');
 
 if (el) {
   createRoot(el).render(<LiveBusMap />);
+}
+
+if (videoCallEl) {
+  createRoot(videoCallEl).render(
+    <VideoCallPage
+      initialBusId={videoCallEl.dataset.busId || null}
+      initialBusLabel={videoCallEl.dataset.busLabel || ''}
+    />
+  );
 }

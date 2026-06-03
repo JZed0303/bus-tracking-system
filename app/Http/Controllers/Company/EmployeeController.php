@@ -129,23 +129,44 @@ class EmployeeController extends Controller
     /**
      * Show employee profile (must belong to this company).
      */
-    public function show(Employee $employee): View
+    public function show(Request $request, Employee $employee): View
     {
         $this->authorizeCompany($employee);
 
-        $employee->load(['user', 'company', 'qrcode', 'checkins.trip']);
+        $employee->load(['user', 'company', 'qrcode']);
 
-        $checkinsForMap = $employee->checkins()
+        $validated = $request->validate([
+            'scan_date' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        $selectedScanDate = $validated['scan_date'] ?? null;
+
+        $checkinsQuery = $employee->checkins()
+            ->with('trip')
+            ->when($selectedScanDate, function ($q) use ($selectedScanDate) {
+                $q->whereDate('scan_time', $selectedScanDate);
+            });
+
+        $checkinsForMap = (clone $checkinsQuery)
             ->select('id', 'scan_type', 'scan_time', 'scan_lat', 'scan_lng', 'trip_id')
             ->whereNotNull('scan_lat')
             ->whereNotNull('scan_lng')
             ->orderBy('scan_time', 'asc')
             ->get();
 
+        $checkins = (clone $checkinsQuery)
+            ->orderByDesc('scan_time')
+            ->get();
+
         return view('company.employees.show', [
             'employee'       => $employee,
-            'checkinCount'   => $employee->checkins()->count(),
-            'lastCheckin'    => $employee->checkins()->latest('scan_time')->first(),
+            'selectedScanDate' => $selectedScanDate,
+            'checkins'       => $checkins,
+            'checkinCount'   => $checkins->count(),
+            'checkinOnlyCount' => $checkins->where('scan_type', 'checkin')->count(),
+            'checkoutOnlyCount' => $checkins->where('scan_type', 'checkout')->count(),
+            'tripCount'      => $checkins->pluck('trip_id')->filter()->unique()->count(),
+            'lastCheckin'    => $checkins->first(),
             'checkinsForMap' => $checkinsForMap,
         ]);
     }

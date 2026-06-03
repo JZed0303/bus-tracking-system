@@ -50,7 +50,41 @@ class DriverController extends Controller
 
         $companies = Company::orderBy('name')->get();
 
-        return view('admin.drivers.index', compact('drivers', 'companies'));
+        return view('admin.drivers.index', [
+            'drivers' => $drivers,
+            'companies' => $companies,
+            'isArchive' => false,
+        ]);
+    }
+
+    public function archive(): View
+    {
+        $drivers = Driver::onlyTrashed()
+            ->with([
+                'user',
+                'currentAssignment.bus',
+                'currentAssignment.route',
+                'currentAssignment.company',
+            ])
+            ->when(request('company_id'), function ($q) {
+                $q->whereHas('currentAssignment', function ($q2) {
+                    $q2->where('company_id', request('company_id'));
+                });
+            })
+            ->when(request('status'), function ($q) {
+                $status = request('status') === 'inactive' ? 'suspended' : request('status');
+                $q->where('status', $status);
+            })
+            ->orderByDesc('deleted_at')
+            ->get();
+
+        $companies = Company::orderBy('name')->get();
+
+        return view('admin.drivers.index', [
+            'drivers' => $drivers,
+            'companies' => $companies,
+            'isArchive' => true,
+        ]);
     }
 
     /**
@@ -225,5 +259,37 @@ class DriverController extends Controller
         return redirect()
             ->route('admin.drivers.index')
             ->with('success', 'Driver updated successfully.');
+    }
+
+    public function destroy(Driver $driver): RedirectResponse
+    {
+        DB::transaction(function () use ($driver) {
+            if ($driver->user) {
+                $driver->user->update(['status' => 'inactive']);
+            }
+
+            $driver->delete();
+        });
+
+        return redirect()
+            ->route('admin.drivers.index')
+            ->with('success', 'Driver deleted successfully.');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $driver = Driver::onlyTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($driver) {
+            $driver->restore();
+
+            if ($driver->user) {
+                $driver->user->update(['status' => 'active']);
+            }
+        });
+
+        return redirect()
+            ->route('admin.drivers.archive')
+            ->with('success', 'Driver restored successfully.');
     }
 }

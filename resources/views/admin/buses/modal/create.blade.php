@@ -6,6 +6,7 @@
       action="{{ request()->routeIs('company.*') ? route('company.buses.store') : route('admin.buses.store') }}"
       enctype="multipart/form-data"
       class="needs-validation"
+      style="display: block; width: 100%;"
       novalidate>
 
                 @csrf

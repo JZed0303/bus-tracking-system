@@ -166,6 +166,8 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         SimpleSoftwareIO\QrCode\QrCodeServiceProvider::class,
+        Maatwebsite\Excel\ExcelServiceProvider::class,
+        Codedge\Fpdf\FpdfServiceProvider::class,
 
         App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
@@ -186,6 +188,8 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
         SimpleSoftwareIO\QrCode\QrCodeServiceProvider::class,
+        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+        'Fpdf' => Codedge\Fpdf\Facades\Fpdf::class,
     ])->toArray(),
 
 ];

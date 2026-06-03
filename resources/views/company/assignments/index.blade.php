@@ -134,7 +134,9 @@
                         <tr>
                             {{-- DRIVER --}}
                             <td>
-                                <div class="fw-semibold">{{ $assignment->driver->user->full_name }}</div>
+                                <div class="fw-semibold">
+                                    {{ $assignment->driver?->user?->full_name ?? 'No driver assigned' }}
+                                </div>
                                 <small class="text-muted">Driver ID: {{ $assignment->driver_id }}</small>
                             </td>
 

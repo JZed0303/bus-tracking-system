@@ -19,7 +19,7 @@ class EmployeeRouteStop extends Model
 
     public function stop()
     {
-        return $this->belongsTo(RouteStop::class);
+        return $this->belongsTo(RouteStop::class, 'route_stop_id');
     }
 
     

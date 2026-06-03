@@ -4,6 +4,7 @@
 
 @section('css')
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 
 <style>
 /* ============================
@@ -49,6 +50,30 @@
 #route-map {
     height: 520px;
     border-radius: 8px;
+}
+.route-map-shell {
+    position: relative;
+}
+#route-map.route-loading {
+    filter: blur(2px);
+    transition: filter 0.15s ease;
+}
+.route-map-loader {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: saturate(1.1);
+    border-radius: 8px;
+    z-index: 900;
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+}
+.route-map-shell.loading .route-map-loader {
+    display: flex;
 }
 
 /* Section blocks */
@@ -263,6 +288,12 @@ textarea.form-control-sm {
                         </select>
 
                         <input type="hidden" name="stops_json" id="stops_json">
+                        <input type="hidden" name="route_geometry_json" id="route_geometry_json" value="{{ $routeGeometryJson ? e($routeGeometryJson) : '' }}">
+                        {{-- Optimistic lock token: prevents silent overwrite when multiple admins edit the same route. --}}
+                        <input type="hidden" name="route_updated_at" value="{{ optional($route->updated_at)->toIso8601String() }}">
+                        @error('route_updated_at')
+                            <div class="alert alert-warning py-2 px-3 mb-2">{{ $message }}</div>
+                        @enderror
 
                         <button class="btn btn-primary btn-sm w-100">
                             Update Route
@@ -279,11 +310,16 @@ textarea.form-control-sm {
             <div class="card-header py-2">
                 <strong>Route Map</strong>
                 <small class="text-muted d-block">
-                    Drag markers to update route
+                    Drag markers or drag the blue line to reshape route
                 </small>
             </div>
             <div class="card-body p-1">
-                <div id="route-map"></div>
+                {{-- Routing provider/limit errors are shown here for operators. --}}
+                <div id="route-map-alert" class="alert alert-warning m-2 py-2 px-3 d-none"></div>
+                <div class="route-map-shell" id="route-map-shell">
+                    <div id="route-map"></div>
+                    <div class="route-map-loader" id="route-map-loader">Loading route...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -319,9 +355,17 @@ textarea.form-control-sm {
 
 @section('scripts')
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
 <script src="{{ URL::asset('build/js/app.js') }}"></script>
 
 <script>
+window.ROUTE_MAP_CONFIG = {
+    // Server endpoint keeps ORS API key private.
+    directionsEndpoint: @json(route('admin.api.routes.directions')),
+    // Keep OSRM fallback URL configurable.
+    osrmServiceUrl: @json(rtrim(config('services.osrm.base_url', 'https://router.project-osrm.org'), '/') . '/route/v1')
+};
+
 window.EXISTING_ROUTE = {
     start: {
         lat: {{ $route->start_lat }},

@@ -34,7 +34,28 @@ class CompanyController extends Controller
         // Use get() for DataTables client-side
         $companies = $query->get();
 
-        return view('admin.companies.index', compact('companies'));
+        return view('admin.companies.index', [
+            'companies' => $companies,
+            'isArchive' => false,
+        ]);
+    }
+
+    public function archive(Request $request)
+    {
+        $query = Company::onlyTrashed()
+            ->withCount(['employees', 'routes'])
+            ->orderByDesc('deleted_at');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $companies = $query->get();
+
+        return view('admin.companies.index', [
+            'companies' => $companies,
+            'isArchive' => true,
+        ]);
     }
 
     /**
@@ -227,8 +248,6 @@ public function update(Request $request, Company $company)
     public function destroy(Company $company)
     {
         DB::transaction(function () use ($company) {
-            $this->deleteCompanyLogoIfExists($company);
-
             User::query()
                 ->where('company_id', $company->id)
                 ->update(['status' => 'inactive']);
@@ -239,6 +258,24 @@ public function update(Request $request, Company $company)
         return redirect()
             ->route('admin.companies.index')
             ->with('success', 'Company deleted successfully.');
+    }
+
+    public function restore(int $id)
+    {
+        $company = Company::onlyTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($company) {
+            $company->restore();
+
+            User::query()
+                ->where('company_id', $company->id)
+                ->where('status', 'inactive')
+                ->update(['status' => 'active']);
+        });
+
+        return redirect()
+            ->route('admin.companies.archive')
+            ->with('success', 'Company restored successfully.');
     }
 
     /**

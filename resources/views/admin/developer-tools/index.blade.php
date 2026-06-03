@@ -38,7 +38,7 @@
     @endif
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="mb-1">Assignments</h6>
@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="mb-1">Trips</h6>
@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="mb-1">Checkins</h6>
@@ -78,6 +78,21 @@
                         <input type="hidden" name="action" value="truncate_checkins">
                         <input type="hidden" name="confirm_text" value="RESET">
                         <button type="submit" class="btn btn-danger btn-sm w-100">Truncate Checkins</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="mb-1">Routes</h6>
+                    <p class="text-muted mb-3">Current rows: <strong>{{ number_format($routeCount) }}</strong></p>
+                    <form method="POST" action="{{ route('admin.developer-tools.run') }}" onsubmit="return confirmReset(this);">
+                        @csrf
+                        <input type="hidden" name="action" value="truncate_routes">
+                        <input type="hidden" name="confirm_text" value="RESET">
+                        <button type="submit" class="btn btn-danger btn-sm w-100">Truncate Routes</button>
                     </form>
                 </div>
             </div>
@@ -119,6 +134,45 @@
                             <button type="submit" class="btn btn-danger">Delete Trip</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="mb-3">Delete a Route (with related records)</h6>
+                    <form method="POST" action="{{ route('admin.developer-tools.run') }}" class="row g-2" onsubmit="return confirmReset(this);">
+                        @csrf
+                        <input type="hidden" name="action" value="delete_route">
+                        <input type="hidden" name="confirm_text" value="RESET">
+                        <div class="col-md-8">
+                            <input type="number" name="route_id" class="form-control" min="1" placeholder="Route ID (e.g., 12)" required>
+                        </div>
+                        <div class="col-md-4 d-grid">
+                            <button type="submit" class="btn btn-danger">Delete Route</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="mb-3">Delete a Group Chat Thread (with messages)</h6>
+                    <form method="POST" action="{{ route('admin.developer-tools.run') }}" class="row g-2" onsubmit="return confirmReset(this);">
+                        @csrf
+                        <input type="hidden" name="action" value="delete_chat_thread">
+                        <input type="hidden" name="confirm_text" value="RESET">
+                        <div class="col-md-8">
+                            <input type="number" name="thread_id" class="form-control" min="1" placeholder="Thread ID (e.g., 7)" required>
+                        </div>
+                        <div class="col-md-4 d-grid">
+                            <button type="submit" class="btn btn-danger">Delete Thread</button>
+                        </div>
+                    </form>
+                    <small class="text-muted d-block mt-2">This also removes related chat messages and participants.</small>
                 </div>
             </div>
         </div>
@@ -191,6 +245,60 @@
     </div>
 
     <div class="row mt-3">
+        <div class="col-12 mb-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">Chat Threads (Latest 50)</h6>
+                        <small class="text-muted">Total threads: <strong>{{ number_format($threadCount) }}</strong></small>
+                    </div>
+                    <a href="{{ route('admin.group-chats.index') }}" class="btn btn-sm btn-primary">Open Group Chats</a>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Context</th>
+                                <th>Title</th>
+                                <th>Company ID</th>
+                                <th>Participants</th>
+                                <th>Messages</th>
+                                <th>Updated</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($threads as $thread)
+                                <tr>
+                                    <td>{{ $thread->id }}</td>
+                                    <td>{{ $thread->type }}</td>
+                                    <td>{{ $thread->context_type ?? '—' }}</td>
+                                    <td>{{ $thread->title ?? '—' }}</td>
+                                    <td>{{ $thread->company_id ?? '—' }}</td>
+                                    <td>{{ $thread->participants_count }}</td>
+                                    <td>{{ $thread->messages_count }}</td>
+                                    <td>{{ $thread->updated_at?->format('Y-m-d H:i:s') ?? '—' }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ route('admin.developer-tools.run') }}" onsubmit="return confirmReset(this);">
+                                            @csrf
+                                            <input type="hidden" name="action" value="delete_chat_thread">
+                                            <input type="hidden" name="confirm_text" value="RESET">
+                                            <input type="hidden" name="thread_id" value="{{ $thread->id }}">
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="9" class="text-muted text-center">No thread records.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">

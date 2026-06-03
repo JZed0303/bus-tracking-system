@@ -145,7 +145,7 @@ background:linear-gradient(to bottom, #b4181e 0%, #940005 48%, #660509 100%) !im
     width: 190px;
     height: auto !important;
     box-shadow: 3px 5px 12px -4px #1213151a;
-    top: 54px;
+    top: 59px;
 }
 .vertical-collpsed .vertical-menu #sidebar-menu > ul > li > a {
     display: flex !important;
@@ -508,7 +508,7 @@ color:white!important;
 <script>
   (function () {
     function cssVar(name, fallback) {
-      var value = getComputedStyle(document.documentElement).getPropertyValue(name);
+      var value = getComputedStyle(document.documentElement).getPropertyValue(name);  
       return (value && value.trim()) || fallback;
     }
 

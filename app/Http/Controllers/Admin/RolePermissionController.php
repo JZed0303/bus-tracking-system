@@ -86,6 +86,11 @@ $specialPermissions = Permission::whereIn('name', [
     'view_admin_dashboard',
     'view_company_dashboard',
     'view_live_tracking',
+    'manage_user_permissions',
+    'manage_role_permissions',
+    'manage_roles',
+    'view_users',
+    'manage_users',
 ])->orderBy('name')->get();
 
     return view('admin.roles.permissions', compact(

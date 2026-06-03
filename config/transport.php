@@ -2,11 +2,18 @@
 
 return [
     'api' => [
+        // Generic API limiter for endpoints without a dedicated higher-throughput profile.
+        'requests_per_minute' => (int) env('API_RATE_LIMIT_PER_MINUTE', 120),
+
         // Protected bus API default limiter (all authenticated bus endpoints).
         'bus_requests_per_minute' => (int) env('BUS_API_RATE_LIMIT_PER_MINUTE', 60),
 
         // Dedicated GPS ingest limiter (applies to /api/bus/gps only).
         'bus_gps_requests_per_minute' => (int) env('BUS_GPS_RATE_LIMIT_PER_MINUTE', 60),
+
+        // High-throughput signaling limiter for WebRTC offer/answer/ICE traffic.
+        'video_calls_signal_requests_per_minute' => (int) env('VIDEO_CALLS_SIGNAL_RATE_LIMIT_PER_MINUTE', 3000),
+
     ],
 
     'dashboard' => [

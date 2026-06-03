@@ -11,6 +11,7 @@ use App\Models\TransportRoute;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AssignmentController extends Controller
@@ -86,18 +87,21 @@ class AssignmentController extends Controller
         $busyBusIds = $busyAssignments->pluck('bus_id')->filter()->unique();
         $busyRouteIds = $busyAssignments->pluck('route_id')->filter()->unique();
 
+        $routes = TransportRoute::with(['company', 'stops'])
+            ->active()
+            ->when($busyRouteIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $busyRouteIds))
+            ->get();
+
         return view('admin.assignments.create', [
             // Hide resources currently used by an ongoing trip.
-            'drivers'   => Driver::with('user')
+            'drivers'   => Driver::with(['user', 'company'])
                 ->active()
                 ->when($busyDriverIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $busyDriverIds))
                 ->get(),
             'buses'     => Bus::active()
                 ->when($busyBusIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $busyBusIds))
                 ->get(),
-            'routes'    => TransportRoute::active()
-                ->when($busyRouteIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $busyRouteIds))
-                ->get(),
+            'routes'    => $routes,
             'companies' => Company::active()->get(),
         ]);
     }
@@ -129,9 +133,19 @@ class AssignmentController extends Controller
 
     public function show(Assignment $assignment): View
     {
-        $assignment->load(['driver.user', 'bus', 'route', 'company', 'trips']);
+        $assignment->load(['driver.user', 'bus', 'route.stops', 'company', 'trips']);
+        $persistedRouteGeometry = $assignment->route_id
+            ? DB::table('routes')
+                ->where('id', $assignment->route_id)
+                ->selectRaw('ST_AsGeoJSON(geom) as geojson')
+                ->value('geojson')
+            : null;
 
-        return view('admin.assignments.show', compact('assignment'));
+        $persistedRouteGeometry = $persistedRouteGeometry
+            ? json_decode($persistedRouteGeometry, true)
+            : null;
+
+        return view('admin.assignments.show', compact('assignment', 'persistedRouteGeometry'));
     }
 
     public function timeline(Assignment $assignment): View

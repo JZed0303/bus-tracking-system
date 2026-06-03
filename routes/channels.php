@@ -54,6 +54,7 @@ Broadcast::channel('chat.thread.{threadId}', function ($actor, $threadId) {
             (method_exists($actor, 'hasRole') && $actor->hasRole('admin')) ||
             (method_exists($actor, 'isCompanyAdmin')
                 && $actor->isCompanyAdmin()
+                && $thread->context_type === 'bus_support'
                 && (int) $thread->company_id === (int) $actor->company_id) ||
             DB::table('chat_participants')
                 ->where('thread_id', (int) $threadId)
@@ -181,4 +182,20 @@ Broadcast::channel('company.{companyId}', function ($actor, $companyId) {
     }
 
     return false;
+});
+
+Broadcast::channel('video-calls.user.{userId}', function ($actor, $userId) {
+    if (!($actor instanceof User)) {
+        return false;
+    }
+
+    return (int) $actor->id === (int) $userId;
+});
+
+Broadcast::channel('video-calls.bus.{busId}', function ($actor, $busId) {
+    if (!($actor instanceof Bus)) {
+        return false;
+    }
+
+    return (int) $actor->id === (int) $busId;
 });

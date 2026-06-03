@@ -35,4 +35,10 @@ return [
         'base_url' => env('OSRM_BASE_URL', 'https://router.project-osrm.org'),
     ],
 
+    'openrouteservice' => [
+        // Keep API key on server only. Never expose this in Blade/JS.
+        'api_key' => env('OPENROUTESERVICE_API_KEY'),
+        'base_url' => env('OPENROUTESERVICE_BASE_URL', 'https://api.openrouteservice.org'),
+    ],
+
 ];

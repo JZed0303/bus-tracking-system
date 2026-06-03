@@ -80,6 +80,12 @@ class QrCheckinService
 
         $scanAt = Carbon::now('Asia/Manila');
 
+        // Serialize capacity checks per trip to avoid overbooking on concurrent scans.
+        Trip::query()
+            ->whereKey($trip->id)
+            ->lockForUpdate()
+            ->value('id');
+
         // ✅ lock the latest scan row (prevents double-checkout)
         $last = Checkin::query()
             ->where('trip_id', $trip->id)
@@ -88,9 +94,10 @@ class QrCheckinService
             ->orderByDesc('id')
             ->lockForUpdate()
             ->first();
-
+                                                                                                                                
         $this->assertScanTimeIsValid($last?->scan_time, $scanAt);
         $scanType = $this->resolveScanTypeFromLast($last);
+        $this->assertBusHasAvailableCapacity($trip, $scanType);
 
         $checkin = Checkin::create([
             'trip_id'                => $trip->id,
@@ -177,7 +184,9 @@ class QrCheckinService
 
         $this->assertLocationProvided($lat, $lng);
 
-        $qr = $this->getValidQr($qrToken);
+        // Offline uploads may include scans captured before a QR was rotated/deactivated.
+        // Resolve by historical token to avoid false "unmatched" employee states.
+        $qr = $this->getValidQrForOfflineScan($qrToken);
         $employee = $qr->employee;
 
         $this->assertEmployeeBelongsToTripCompany($employee->company_id, $trip);
@@ -191,31 +200,42 @@ class QrCheckinService
         $this->assertWithinAllowedArea($trip, (float) $lat, (float) $lng);
 
         $scanAt = Carbon::parse($scanTime)->timezone('Asia/Manila');
-        $last = Checkin::query()
-            ->where('trip_id', $trip->id)
-            ->where('employee_id', $employee->id)
-            ->whereNull('voided_at')
-            ->orderByDesc('id')
-            ->first();
 
-        $this->assertScanTimeIsValid($last?->scan_time, $scanAt);
-        $scanType = $this->resolveScanTypeFromLast($last);
+        return DB::transaction(function () use ($trip, $employee, $lat, $lng, $scanAt, $clientScanId) {
+            // Serialize capacity checks per trip to avoid overbooking on concurrent sync.
+            Trip::query()
+                ->whereKey($trip->id)
+                ->lockForUpdate()
+                ->value('id');
 
-        return Checkin::create([
-            'trip_id'                => $trip->id,
-            'employee_id'            => $employee->id,
-            'scan_type'              => $scanType,
-            'scan_time'              => $scanAt,
-            'scan_lat'               => $lat,
-            'scan_lng'               => $lng,
+            $last = Checkin::query()
+                ->where('trip_id', $trip->id)
+                ->where('employee_id', $employee->id)
+                ->whereNull('voided_at')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
 
-            // ✅ SCANNER = EMPLOYEE
-            'scanned_by_employee_id' => $employee->id,
+            $this->assertScanTimeIsValid($last?->scan_time, $scanAt);
+            $scanType = $this->resolveScanTypeFromLast($last);
+            $this->assertBusHasAvailableCapacity($trip, $scanType);
 
-            'client_scan_id'         => $clientScanId,
-            'is_offline'             => true,
-            'synced_at'              => now(),
-        ]);
+            return Checkin::create([
+                'trip_id'                => $trip->id,
+                'employee_id'            => $employee->id,
+                'scan_type'              => $scanType,
+                'scan_time'              => $scanAt,
+                'scan_lat'               => $lat,
+                'scan_lng'               => $lng,
+
+                // ✅ SCANNER = EMPLOYEE
+                'scanned_by_employee_id' => $employee->id,
+
+                'client_scan_id'         => $clientScanId,
+                'is_offline'             => true,
+                'synced_at'              => now(),
+            ]);
+        });
     }
 
     /* =========================
@@ -290,6 +310,28 @@ class QrCheckinService
             ->with(['employee']) // add employee.user / employee.company if you want
             ->where('qr_token', $qrToken)
             ->where('is_active', true)
+            ->first();
+
+        if (!$qr) {
+            throw ValidationException::withMessages([
+                'qr_token' => ['Invalid QR code.'],
+            ]);
+        }
+
+        return $qr;
+    }
+
+    /**
+     * Offline sync is tolerant to QR rotation: it can resolve inactive historical tokens.
+     * Live scans must continue to use getValidQr() which requires an active token.
+     */
+    public function getValidQrForOfflineScan(string $qrToken): EmployeeQrCode
+    {
+        $qrToken = trim($qrToken);
+
+        $qr = EmployeeQrCode::query()
+            ->with(['employee'])
+            ->where('qr_token', $qrToken)
             ->first();
 
         if (!$qr) {
@@ -400,6 +442,43 @@ class QrCheckinService
                 'location' => ["Too far from bus ({$distance}m)."],
             ]);
         }
+    }
+
+    private function assertBusHasAvailableCapacity(Trip $trip, string $scanType): void
+    {
+        if ($scanType !== 'checkin') {
+            return;
+        }
+
+        $busCapacity = (int) ($trip->assignment?->bus?->capacity ?? 0);
+        if ($busCapacity <= 0) {
+            return;
+        }
+
+        $onboardCount = $this->onboardCountForTrip((int) $trip->id);
+        if ($onboardCount >= $busCapacity) {
+            throw ValidationException::withMessages([
+                'capacity' => ['Bus is full, No seats available.'],
+            ]);
+        }
+    }
+
+    private function onboardCountForTrip(int $tripId): int
+    {
+        return (int) Checkin::query()
+            ->where('trip_id', $tripId)
+            ->where('scan_type', 'checkin')
+            ->whereNull('voided_at')
+            ->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                  ->from('checkins as c2')
+                  ->whereColumn('c2.trip_id', 'checkins.trip_id')
+                  ->whereColumn('c2.employee_id', 'checkins.employee_id')
+                  ->where('c2.scan_type', 'checkout')
+                  ->whereNull('c2.voided_at');
+            })
+            ->distinct()
+            ->count('employee_id');
     }
 
     /**

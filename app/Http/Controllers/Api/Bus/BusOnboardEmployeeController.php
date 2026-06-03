@@ -20,6 +20,7 @@ class BusOnboardEmployeeController extends Controller
 
         // Always resolve active assignment today (non-expired) for this bus
         $assignment = Assignment::query()
+            ->with('bus:id,capacity')
             ->where('bus_id', $bus->id)
             ->whereDate('effective_from', '<=', $today)
             ->where(function ($q) use ($today) {
@@ -98,6 +99,11 @@ class BusOnboardEmployeeController extends Controller
             ];
         });
 
+        $statusCounts = $rows->countBy('status');
+        $onboardCount = (int) ($statusCounts->get('onboard', 0));
+        $busCapacity = (int) ($assignment->bus->capacity ?? 0);
+        $availableCapacity = max(0, $busCapacity - $onboardCount);
+
         return response()->json([
             'status' => 'success',
             'data'   => [
@@ -109,6 +115,17 @@ class BusOnboardEmployeeController extends Controller
                 'assignment' => [
                     'assignment_id' => $assignment->id,
                     'company_id'    => $companyId,
+                ],
+                'capacity' => [
+                    'bus_capacity' => $busCapacity,
+                    'onboard_count' => $onboardCount,
+                    'available_capacity' => $availableCapacity,
+                ],
+                'status_counts' => [
+                    'onboard' => $onboardCount,
+                    'dropped' => (int) ($statusCounts->get('dropped', 0)),
+                    'not_scanned' => (int) ($statusCounts->get('not_scanned', 0)),
+                    'transferred_pending' => (int) ($statusCounts->get('transferred_pending', 0)),
                 ],
                 'count'     => $rows->count(),
                 'employees' => EmployeeTripStatusResource::collection($rows),

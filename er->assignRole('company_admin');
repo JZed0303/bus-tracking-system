@@ -1,0 +1,23 @@
+[90m= [39m[34;4mApp\Models\User[39;24m {#6581
+    [34mid[39m: [35m18[39m,
+    [34mfirst_name[39m: "[32mJohn[39m",
+    [34mmiddle_name[39m: [36mnull[39m,
+    [34mlast_name[39m: "[32mIglesia[39m",
+    [34maddress[39m: [36mnull[39m,
+    [34memail[39m: "[32mcarmona@gmail.com[39m",
+    #[33mpassword[39m: "[32m$2y$10$ZKvOJm/iT0E6oJP0ZyNQcOA8wQlH7r0gQAN3Og3IyBdNMdTk9cA0i[39m",
+    [34mrole[39m: "[32mcompany_admin[39m",
+    [34mstatus[39m: "[32mactive[39m",
+    #[33mremember_token[39m: [36mnull[39m,
+    [34mlast_login_at[39m: [36mnull[39m,
+    [34mcreated_at[39m: "[32m2026-01-07 15:14:45+08[39m",
+    [34mupdated_at[39m: "[32m2026-04-16 09:09:05+08[39m",
+    [34mcompany_id[39m: [35m6[39m,
+    [34mlast_seen_at[39m: "[32m2026-04-16 09:09:05[39m",
+    [34mdeleted_at[39m: [36mnull[39m,
+    [34mtheme_mode[39m: "[32mlight[39m",
+    +[1mfull_name[22m: "[32mJohn Iglesia[39m",
+    +[1mis_online[22m: [36mfalse[39m,
+    +[1mpresence[22m: "[32maway[39m",
+  }
+

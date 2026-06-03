@@ -8,7 +8,24 @@
 @section('body')
     <body data-sidebar="colored">
 @endsection
+@section('css')
+    <style>
+        .table {
+            border: 1px solid #e9ecef;
+        }
+
+        .table th,
+        .table td {
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid #edf0f2;
+        }
+    </style>
+@endsection
 @section('content')
+@php
+    $hasAssignedDriver = $assignment->isActive() && $assignment->driver && $assignment->driver->user;
+@endphp
 <div class="container-fluid">
 
     {{-- EXECUTIVE SUMMARY --}}
@@ -16,10 +33,10 @@
         <div class="card-body row align-items-center">
             <div class="col-md-8">
                 <h4 class="mb-1 fw-semibold">
-                    {{ $assignment->driver->user->full_name }}
+                    {{ $hasAssignedDriver ? $assignment->driver->user->full_name : 'No active driver assigned' }}
                 </h4>
                 <div class="text-muted">
-                    {{ $assignment->company->name }} ·
+                    {{ $assignment->company->name ?? '—' }} ·
                     Assignment ID: <strong>#{{ $assignment->id }}</strong>
                 </div>
             </div>
@@ -28,6 +45,59 @@
                 <span class="badge fs-6 bg-{{ $assignment->status === 'active' ? 'success' : 'secondary' }}">
                     {{ strtoupper($assignment->status) }}
                 </span>
+            </div>
+        </div>
+    </div>
+
+    {{-- DRIVER & BUS IMAGES --}}
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Driver Photo</h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <img
+                            src="{{ $hasAssignedDriver ? $assignment->driver->photo_url : asset('build/images/user-placeholder.png') }}"
+                            alt="Driver Photo"
+                            class="rounded-circle border"
+                            width="96"
+                            height="96"
+                            style="object-fit: cover;"
+                        >
+                        <div>
+                            <div class="fw-semibold">
+                                {{ $hasAssignedDriver ? $assignment->driver->user->full_name : 'No active driver assigned' }}
+                            </div>
+                            <small class="text-muted">
+                                {{ $hasAssignedDriver ? ($assignment->driver->license_number ?? 'No license number') : 'No driver details available' }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Bus Photo</h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <img
+                            src="{{ optional($assignment->bus)->photo_url ?? asset('build/images/bus-placeholder.png') }}"
+                            alt="Bus Photo"
+                            class="rounded border"
+                            width="140"
+                            height="96"
+                            style="object-fit: cover;"
+                        >
+                        <div>
+                            <div class="fw-semibold">{{ optional($assignment->bus)->plate_number ?? 'No bus assigned' }}</div>
+                            <small class="text-muted">
+                                {{ optional($assignment->bus)->brand_model ?? (optional($assignment->bus)->model ?? 'No model details') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -43,19 +113,19 @@
                     <table class="table table-sm table-borderless mb-0">
                         <tr>
                             <th width="160">Driver</th>
-                            <td>{{ $assignment->driver->user->full_name }}</td>
+                            <td>{{ $hasAssignedDriver ? $assignment->driver->user->full_name : 'No active driver assigned' }}</td>
                         </tr>
                         <tr>
                             <th>Bus Plate Number</th>
-                            <td>{{ $assignment->bus->plate_number }}</td>
+                            <td>{{ $assignment->bus->plate_number ?? '—' }}</td>
                         </tr>
                         <tr>
                             <th>Assigned Route</th>
-                            <td>{{ $assignment->route->name }}</td>
+                            <td>{{ $assignment->route->name ?? '—' }}</td>
                         </tr>
                         <tr>
                             <th>Company</th>
-                            <td>{{ $assignment->company->name }}</td>
+                            <td>{{ $assignment->company->name ?? '—' }}</td>
                         </tr>
                         <tr>
                             <th>Status</th>
@@ -88,11 +158,11 @@
                     <table class="table table-sm table-borderless mb-0">
                         <tr>
                             <th width="160">Driver Contact</th>
-                            <td>{{ $assignment->driver->user->contact_number ?? '—' }}</td>
+                            <td>{{ $hasAssignedDriver ? ($assignment->driver->user->contact_number ?? '—') : '—' }}</td>
                         </tr>
                         <tr>
                             <th>Driver License No.</th>
-                            <td>{{ $assignment->driver->license_number ?? '—' }}</td>
+                            <td>{{ $hasAssignedDriver ? ($assignment->driver->license_number ?? '—') : '—' }}</td>
                         </tr>
                         <tr>
                             <th>Bus Model</th>

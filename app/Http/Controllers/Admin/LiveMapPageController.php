@@ -10,4 +10,9 @@ class LiveMapPageController extends Controller
     {
         return view('admin.live-map.index');
     }
+
+    public function videoCall()
+    {
+        return view('admin.video-calls.index');
+    }
 }

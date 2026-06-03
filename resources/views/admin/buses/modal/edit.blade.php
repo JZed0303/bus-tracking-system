@@ -5,14 +5,15 @@
             <form method="POST"
                   action="{{ request()->routeIs('company.*') ? route('company.buses.update', $bus) : route('admin.buses.update', $bus) }}"
                   enctype="multipart/form-data"
-                  class="needs-validation"
+                  class="needs-validation bus-edit-form"
+                  style="display: block; width: 100%;"
                   novalidate>
                 @csrf
                 @method('PUT')
 
                 {{-- Header --}}
-                <div class="modal-header">
-                    <div>
+                <div class="modal-header d-flex align-items-start justify-content-between">
+                    <div class="pe-3">
                         <h5 class="modal-title mb-0">Edit Bus</h5>
                         <small class="text-muted">Update bus details and photo.</small>
                     </div>
@@ -30,7 +31,7 @@
                         </div>
 
                         <div class="row g-3 align-items-center">
-                            <div class="col-auto">
+                            <div class="col-12 col-md-auto text-center text-md-start">
                                 <img src="{{ $bus->photo_url }}"
                                      alt="Bus Photo"
                                      class="rounded border bus-photo-preview"
@@ -40,7 +41,7 @@
                                      style="object-fit: cover;">
                             </div>
 
-                            <div class="col">
+                            <div class="col-12 col-md">
                                 <input type="file"
                                        name="photo"
                                        class="form-control bus-photo-input @error('photo') is-invalid @enderror"
@@ -117,7 +118,7 @@
                 </div>
 
                 {{-- Footer --}}
-                <div class="modal-footer">
+                <div class="modal-footer d-flex justify-content-end gap-2 flex-wrap">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">
                         Cancel
                     </button>

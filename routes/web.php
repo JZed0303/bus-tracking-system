@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\DriverAuthLogController;
 use App\Http\Controllers\Admin\LiveMapPageController;
 use App\Http\Controllers\Admin\LiveTrackingController;
 use App\Http\Controllers\Admin\RouteController;
+use App\Http\Controllers\Admin\RouteDirectionsController;
 use App\Http\Controllers\Admin\TripController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\UserPermissionController;
@@ -110,7 +111,7 @@ Route::get('/debug-chat-sound/{threadId}', function ($threadId) {
 */
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware(['auth', 'role:super_admin'])
+    ->middleware(['auth', 'role:super_admin|admin'])
     ->group(function () {
 
         // Dashboard
@@ -132,15 +133,17 @@ Route::prefix('admin')
         // Users module
         Route::prefix('users')->name('users.')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('index')->middleware('can:view_users');
+            Route::get('/archive', [UserController::class, 'archive'])->name('archive')->middleware('can:manage_users');
             Route::get('/create', [UserController::class, 'create'])->name('create')->middleware('can:manage_users');
             Route::post('/', [UserController::class, 'store'])->name('store')->middleware('can:manage_users');
+            Route::post('{id}/restore', [UserController::class, 'restore'])->name('restore')->middleware('can:manage_users');
             Route::get('{user}/edit', [UserController::class, 'edit'])->name('edit')->middleware('can:manage_users');
             Route::put('{user}', [UserController::class, 'update'])->name('update')->middleware('can:manage_users');
             Route::delete('{user}', [UserController::class, 'destroy'])->name('destroy')->middleware('can:manage_users');
         });
 
         // User permission management
-        Route::middleware('can:manage_roles')->group(function () {
+        Route::middleware('can:manage_user_permissions')->group(function () {
             Route::get('users/permissions', [UserPermissionController::class, 'index'])
                 ->name('users.permissions.index');
 
@@ -150,16 +153,23 @@ Route::prefix('admin')
             Route::post('users/{user}/permissions', [UserPermissionController::class, 'update'])
                 ->name('users.permissions.update');
 
+        });
+
+        Route::middleware('can:manage_role_permissions')->group(function () {
             Route::get('audit-trail', [AuditTrailController::class, 'index'])
                 ->name('audit-trail.index');
         });
 
         // Companies
+        Route::get('companies/archive', [CompanyController::class, 'archive'])->name('companies.archive');
+        Route::post('companies/{id}/restore', [CompanyController::class, 'restore'])->name('companies.restore');
         Route::resource('companies', CompanyController::class);
 
         // Employees
+        Route::get('employees/archive', [EmployeeController::class, 'archive'])->name('employees.archive');
+        Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
         Route::resource('employees', EmployeeController::class)
-            ->only(['index', 'show', 'create', 'store', 'edit', 'update']);
+            ->only(['index', 'show', 'create', 'store', 'edit', 'update', 'destroy']);
 
         Route::get('/employees/{employee}/qr', [EmployeeQrController::class, 'show'])->name('employees.qr');
         Route::post('/employees/{employee}/qr', [EmployeeQrController::class, 'generate'])->name('employees.qr.generate');
@@ -171,18 +181,24 @@ Route::prefix('admin')
             ->name('employees.trips');
 
         // Buses
-        Route::resource('buses', BusController::class)->only(['index', 'show', 'store', 'update']);
+        Route::get('buses/archive', [BusController::class, 'archive'])->name('buses.archive');
+        Route::post('buses/{id}/restore', [BusController::class, 'restore'])->name('buses.restore');
+        Route::resource('buses', BusController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
         Route::get('buses/{bus}/json', [BusController::class, 'json'])->name('buses.json');
 
         // Routes
+        Route::get('routes/{route}/preview', [RouteController::class, 'preview'])->name('routes.preview');
         Route::resource('routes', RouteController::class);
 
         // Drivers
         Route::prefix('drivers')->name('drivers.')->group(function () {
             Route::get('/', [DriverController::class, 'index'])->name('index');
+            Route::get('/archive', [DriverController::class, 'archive'])->name('archive');
             Route::post('/', [DriverController::class, 'store'])->name('store');
+            Route::post('{id}/restore', [DriverController::class, 'restore'])->name('restore');
             Route::get('{driver}', [DriverController::class, 'show'])->name('show');
             Route::put('{driver}', [DriverController::class, 'update'])->name('update');
+            Route::delete('{driver}', [DriverController::class, 'destroy'])->name('destroy');
             Route::get('{driver}/assignment', [DriverAssignmentController::class, 'show'])->name('assignment');
             Route::post('{driver}/assignment', [DriverAssignmentController::class, 'store'])->name('assignment.store');
             Route::get('{driver}/auth-logs', [DriverAuthLogController::class, 'index'])->name('auth-logs');
@@ -210,6 +226,8 @@ Route::prefix('admin')
             Route::get('active', [TripController::class, 'active'])->name('active');
             Route::get('/', [TripController::class, 'today'])->name('today');
             Route::get('{trip}', [TripController::class, 'show'])->name('show');
+            Route::get('{trip}/report', [TripController::class, 'report'])->name('report');
+            Route::get('{trip}/report/export/{type}', [TripController::class, 'exportReport'])->name('report.export');
             Route::get('{trip}/gps-playback', [TripController::class, 'gpsPlayback'])->name('gps-playback');
             Route::post('{trip}/incident', [TripController::class, 'reportIncident'])->name('incident');
             Route::post('{trip}/checkins/{checkin}/void', [TripController::class, 'voidCheckin'])->name('checkins.void');
@@ -220,14 +238,21 @@ Route::prefix('admin')
 
         // Live map page (ADMIN: super_admin)
         Route::get('/live-map', [LiveMapPageController::class, 'index'])->name('live-map');
+        Route::get('/video-calls', [LiveMapPageController::class, 'videoCall'])->name('video-calls.index');
 
         // Developer tools (SUPER ADMIN ONLY)
-        Route::get('/developer-tools', [DeveloperToolsController::class, 'index'])->name('developer-tools.index');
-        Route::post('/developer-tools/run', [DeveloperToolsController::class, 'run'])->name('developer-tools.run');
+        Route::get('/developer-tools', [DeveloperToolsController::class, 'index'])
+            ->middleware('role:super_admin')
+            ->name('developer-tools.index');
+        Route::post('/developer-tools/run', [DeveloperToolsController::class, 'run'])
+            ->middleware('role:super_admin')
+            ->name('developer-tools.run');
 
         // Live tracking JSON endpoints (ADMIN: super_admin)
         Route::prefix('api')->name('api.')->group(function () {
             Route::get('/live-buses', [LiveTrackingController::class, 'index'])->name('live-buses');
+            // Secure ORS proxy for route-map pages (key remains server-side).
+            Route::post('/routes/directions', [RouteDirectionsController::class, 'store'])->name('routes.directions');
         });
     });
 
@@ -308,6 +333,8 @@ Route::prefix('company')
             Route::get('active', [CompanyTripController::class, 'active'])->name('active');
             Route::get('/', [CompanyTripController::class, 'today'])->name('today');
             Route::get('{trip}', [CompanyTripController::class, 'show'])->name('show');
+            Route::get('{trip}/report', [CompanyTripController::class, 'report'])->name('report');
+            Route::get('{trip}/report/export/{type}', [CompanyTripController::class, 'exportReport'])->name('report.export');
             Route::get('{trip}/gps-playback', [CompanyTripController::class, 'gpsPlayback'])->name('gps-playback');
             Route::post('{trip}/incident', [CompanyTripController::class, 'reportIncident'])->name('incident');
             Route::post('{trip}/checkins/{checkin}/void', [CompanyTripController::class, 'voidCheckin'])->name('checkins.void');
@@ -321,10 +348,16 @@ Route::prefix('company')
 
         // Reports
         Route::get('/reports', [CompanyReportController::class, 'index'])
+            ->middleware('can:view_reports')
             ->name('reports.index');
 
         Route::get('/reports/export/{type}', [CompanyReportController::class, 'export'])
+            ->middleware('can:view_reports')
             ->name('reports.export');
+
+        Route::get('/reports/print', [CompanyReportController::class, 'print'])
+            ->middleware('can:view_reports')
+            ->name('reports.print');
 
         // Notifications
         Route::get('/notifications', [CompanyNotificationController::class, 'index'])
@@ -379,6 +412,8 @@ Route::prefix('company')
         // Live map page (COMPANY)
         Route::get('/live-map', [LiveMapPageController::class, 'index'])
             ->name('live-map');
+        Route::get('/video-calls', [LiveMapPageController::class, 'videoCall'])
+            ->name('video-calls.index');
 
         // OPTIONAL: old URL for backward compatibility
         Route::get('/live-tracking', [LiveMapPageController::class, 'index'])
@@ -484,15 +519,19 @@ Route::prefix('admin')
 | ROLES & PERMISSIONS
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'can:manage_roles'])
+Route::middleware(['auth', 'can:manage_role_permissions'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+        Route::post('permissions', [RoleController::class, 'storePermission'])
+            ->middleware('role:super_admin')
+            ->name('permissions.store');
         Route::get('roles/{role}/permissions', [RolePermissionController::class, 'edit'])->name('roles.permissions.edit');
         Route::post('roles/{role}/permissions', [RolePermissionController::class, 'update'])->name('roles.permissions.update');
 
-        Route::prefix('modules')->name('modules.')->middleware('role:super_admin|admin')->group(function () {
+        Route::prefix('modules')->name('modules.')->middleware('role:super_admin')->group(function () {
             Route::get('/', [ModuleController::class, 'index'])->name('index');
             Route::post('/', [ModuleController::class, 'store'])->name('store');
             Route::put('{module}', [ModuleController::class, 'update'])->name('update');

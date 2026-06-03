@@ -17,6 +17,8 @@ class BusResource extends JsonResource
         $activeAssignment = $bus->activeAssignment;
         $assignedRoute    = $activeAssignment?->route;
         $tripRoute        = $trip?->route;
+        $driver           = $activeAssignment?->driver;
+        $driverUser       = $driver?->user;
 
         // Prefer dispatcher assignment route, else trip route.
         $route = $assignedRoute ?: $tripRoute;
@@ -32,6 +34,7 @@ class BusResource extends JsonResource
             'capacity'     => $bus->capacity,
             'brand_model'  => $bus->brand_model,
             'status'       => $bus->status,
+            'photo_url'    => $bus->photo_url,
 
             'active_trip' => $trip ? [
                 'id'         => $trip->id,
@@ -52,6 +55,19 @@ class BusResource extends JsonResource
                 'origin'      => $route->origin,
                 'destination' => $route->destination,
                 'description' => $route->description,
+            ] : null,
+
+            'driver' => $driver ? [
+                'id' => $driver->id,
+                'user_id' => $driver->user_id,
+                'name' => $driverUser?->full_name,
+                'first_name' => $driverUser?->first_name,
+                'last_name' => $driverUser?->last_name,
+                'email' => $driverUser?->email,
+                'phone' => $driver->phone,
+                'license_number' => $driver->license_number,
+                'status' => $driver->status,
+                'photo_url' => $driver->photo_url,
             ] : null,
         ];
     }

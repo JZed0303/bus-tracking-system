@@ -12,16 +12,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             RoleSeeder::class,
             UserSeeder::class,
-            CompanySeeder::class,
-            EmployeeSeeder::class,
-            // EmployeeQrSeeder::class,
-            DriverSeeder::class,
-            BusSeeder::class,
-            RouteSeeder::class,
-            AssignmentSeeder::class,
-             CheckinSeeder::class,
-            TripSeeder::class,
-           
+            CarmonaNetlinkTripSeeder::class,
         ]);
     }
 }

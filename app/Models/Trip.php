@@ -23,6 +23,7 @@ class Trip extends Model implements Auditable
         'direction',
         'status',
         'ended_reason',
+        'incident_reason',
         'incident_reported_at',
     ];
 

@@ -42,4 +42,5 @@ class RouteRegistrationTest extends TestCase
         $this->assertContains('throttle:bus-gps', $middlewares);
         $this->assertContains('abilities:bus:gps', $middlewares);
     }
+
 }

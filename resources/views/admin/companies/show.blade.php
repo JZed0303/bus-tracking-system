@@ -292,7 +292,13 @@
                                 <div class="info-icon"><i class="mdi mdi-phone-outline"></i></div>
                                 <div class="w-100">
                                     <p class="info-label">Contact Number</p>
-                                    <p class="info-value">{{ $company->contact_number ?? '—' }}</p>
+                                    @php
+                                        $contactNumber = trim((string) ($company->contact_number ?? ''));
+                                        $contactNumber = preg_replace('/[\s-]+/', '', $contactNumber);
+                                        $contactNumber = preg_replace('/^\+?63/', '', $contactNumber);
+                                        $contactNumber = preg_replace('/^0/', '', $contactNumber);
+                                    @endphp
+                                    <p class="info-value">{{ $contactNumber !== '' ? '+63 '.$contactNumber : '—' }}</p>
                                 </div>
                             </div>
                         </div>

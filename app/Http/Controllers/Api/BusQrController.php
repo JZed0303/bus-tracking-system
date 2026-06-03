@@ -32,9 +32,9 @@ class BusQrController extends Controller
             if (!$trip) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'No active trip for this bus/driver.',
+                    'message' => 'No active trip for this bus.',
                     'errors'  => [
-                        'trip' => ['No active trip for this bus/driver.'],
+                        'trip' => ['No active trip for this bus.'],
                     ],
                 ], 409);
             }

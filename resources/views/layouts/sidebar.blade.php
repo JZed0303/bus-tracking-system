@@ -339,6 +339,15 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
     </li>
 @endif
 
+                            @if (auth()->user()->canByRole('view_reports') && auth()->user()->hasAnyRole(['company_admin', 'super_admin']))
+                                <li>
+                                    <a href="{{ route('company.reports.index') }}">
+                                        <i class="ri-file-chart-line me-1"></i>
+                                        Reports
+                                    </a>
+                                </li>
+                            @endif
+
                             <li>
                                 <a href="{{ auth()->user()->isCompanyUser()
                                     ? route('company.calendar.index')
@@ -557,31 +566,41 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
                 @endif
 
                 {{-- ================= ADMINISTRATION ================= --}}
-@can('manage_roles')
+@php
+    $canManageUserPermissions = auth()->user()->canByRole('manage_user_permissions');
+    $canManageRolePermissions = auth()->user()->canByRole('manage_role_permissions');
+@endphp
+@if ($canManageUserPermissions || $canManageRolePermissions)
     <li class="menu-title">Administrations</li>
-<li>
-    <a href="{{ route('admin.users.permissions.index') }}">
-        <i class="ri-user-fill"></i>
-        <span>User Permissions</span>
-    </a>
-</li>
+    @if ($canManageUserPermissions)
+        <li>
+            <a href="{{ route('admin.users.permissions.index') }}">
+                <i class="ri-user-fill"></i>
+                <span>User Permissions</span>
+            </a>
+        </li>
+    @endif
 
 
-    <li>
-        <a href="{{ route('admin.roles.index') }}">
-            <i class="ri-shield-user-fill"></i>
-            <span>Roles & Permissions</span>
-        </a>
-    </li>
+    @if ($canManageRolePermissions)
+        <li>
+            <a href="{{ route('admin.roles.index') }}">
+                <i class="ri-shield-user-fill"></i>
+                <span>Roles & Permissions</span>
+            </a>
+        </li>
+    @endif
 
-    @php($isAuditTrailRoute = request()->routeIs('admin.audit-trail.*'))
-    <li class="{{ $isAuditTrailRoute ? 'mm-active' : '' }}">
-        <a href="{{ route('admin.audit-trail.index') }}" class="{{ $isAuditTrailRoute ? 'active' : '' }}">
-            <i class="ri-file-list-3-line"></i>
-            <span>Audit Trail</span>
-        </a>
-    </li>
-    @if (auth()->user()->isAdminUser())
+    @if ($canManageRolePermissions)
+        @php($isAuditTrailRoute = request()->routeIs('admin.audit-trail.*'))
+        <li class="{{ $isAuditTrailRoute ? 'mm-active' : '' }}">
+            <a href="{{ route('admin.audit-trail.index') }}" class="{{ $isAuditTrailRoute ? 'active' : '' }}">
+                <i class="ri-file-list-3-line"></i>
+                <span>Audit Trail</span>
+            </a>
+        </li>
+    @endif
+    @if (auth()->user()->isSuperAdmin())
         <li>
             <a href="{{ route('admin.modules.index') }}">
                 <i class="ri-apps-2-line"></i>
@@ -595,7 +614,7 @@ body.vertical-collapsed .sidebar-user-text .text-truncate {
             </a>
         </li>
     @endif
-@endcan
+@endif
 
 
                 {{-- ================= ACCOUNT ================= --}}

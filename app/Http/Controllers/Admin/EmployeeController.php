@@ -37,7 +37,35 @@ class EmployeeController extends Controller
 
         $companies = Company::orderBy('name')->get();
 
-        return view('admin.employees.index', compact('employees', 'companies'));
+        return view('admin.employees.index', [
+            'employees' => $employees,
+            'companies' => $companies,
+            'isArchive' => false,
+        ]);
+    }
+
+    public function archive(Request $request): View
+    {
+        $employees = Employee::onlyTrashed()->with(['user', 'company', 'qrcode'])
+            ->when($request->company_id, function ($q) use ($request) {
+                $q->where('company_id', $request->company_id);
+            })
+            ->when($request->department, function ($q) use ($request) {
+                $q->where('department', 'like', "%{$request->department}%");
+            })
+            ->when($request->status, function ($q) use ($request) {
+                $q->where('status', $request->status);
+            })
+            ->orderByDesc('deleted_at')
+            ->get();
+
+        $companies = Company::orderBy('name')->get();
+
+        return view('admin.employees.index', [
+            'employees' => $employees,
+            'companies' => $companies,
+            'isArchive' => true,
+        ]);
     }
 
     /**
@@ -110,21 +138,42 @@ class EmployeeController extends Controller
     /**
      * Show employee profile
      */
-public function show(Employee $employee): \Illuminate\Contracts\View\View
+public function show(Request $request, Employee $employee): \Illuminate\Contracts\View\View
 {
-    $employee->load(['user', 'company', 'qrcode', 'checkins.trip']);
+    $employee->load(['user', 'company', 'qrcode']);
 
-    $checkinsForMap = $employee->checkins()
+    $validated = $request->validate([
+        'scan_date' => ['nullable', 'date_format:Y-m-d'],
+    ]);
+
+    $selectedScanDate = $validated['scan_date'] ?? null;
+
+    $checkinsQuery = $employee->checkins()
+        ->with('trip')
+        ->when($selectedScanDate, function ($q) use ($selectedScanDate) {
+            $q->whereDate('scan_time', $selectedScanDate);
+        });
+
+    $checkinsForMap = (clone $checkinsQuery)
         ->select('id', 'scan_type', 'scan_time', 'scan_lat', 'scan_lng', 'trip_id')
         ->whereNotNull('scan_lat')
         ->whereNotNull('scan_lng')
         ->orderBy('scan_time', 'asc')
         ->get();
 
+    $checkins = (clone $checkinsQuery)
+        ->orderByDesc('scan_time')
+        ->get();
+
     return view('admin.employees.show', [
         'employee'        => $employee,
-        'checkinCount'    => $employee->checkins()->count(),
-        'lastCheckin'     => $employee->checkins()->latest('scan_time')->first(),
+        'selectedScanDate' => $selectedScanDate,
+        'checkins'         => $checkins,
+        'checkinCount'     => $checkins->count(),
+        'checkinOnlyCount' => $checkins->where('scan_type', 'checkin')->count(),
+        'checkoutOnlyCount' => $checkins->where('scan_type', 'checkout')->count(),
+        'tripCount'        => $checkins->pluck('trip_id')->filter()->unique()->count(),
+        'lastCheckin'      => $checkins->first(),
         'checkinsForMap'  => $checkinsForMap,
     ]);
 }
@@ -195,6 +244,38 @@ public function show(Employee $employee): \Illuminate\Contracts\View\View
         return redirect()
             ->route('admin.employees.index')
             ->with('success', 'Employee updated successfully.');
+    }
+
+    public function destroy(Employee $employee): RedirectResponse
+    {
+        DB::transaction(function () use ($employee) {
+            if ($employee->user) {
+                $employee->user->update(['status' => 'inactive']);
+            }
+
+            $employee->delete();
+        });
+
+        return redirect()
+            ->route('admin.employees.index')
+            ->with('success', 'Employee deleted successfully.');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $employee = Employee::onlyTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($employee) {
+            $employee->restore();
+
+            if ($employee->user) {
+                $employee->user->update(['status' => 'active']);
+            }
+        });
+
+        return redirect()
+            ->route('admin.employees.archive')
+            ->with('success', 'Employee restored successfully.');
     }
 
 }

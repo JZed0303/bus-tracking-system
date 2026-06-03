@@ -12,6 +12,8 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // Route-map directions endpoint is called by JS fetch and does not mutate DB state.
+        // Excluding it prevents intermittent 419 token mismatch fallbacks on long-lived sessions.
+        'admin/api/routes/directions',
     ];
 }

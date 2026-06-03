@@ -1,10 +1,8 @@
 <div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-
-            <form method="POST" id="editEmployeeForm" enctype="multipart/form-data">
-                @csrf
-                @method('PUT')
+        <form method="POST" id="editEmployeeForm" class="modal-content" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
 
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Employee</h5>
@@ -141,8 +139,6 @@
                     <button type="submit" class="btn btn-primary">Update Employee</button>
                 </div>
 
-            </form>
-
-        </div>
+        </form>
     </div>
 </div>

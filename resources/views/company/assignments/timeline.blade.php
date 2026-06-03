@@ -11,15 +11,19 @@
         <div class="card-body row">
             <div class="col-md-4">
                 <strong>Driver:</strong><br>
-                {{ $assignment->driver->user->full_name }}
+                @if($assignment->isActive() && $assignment->driver && $assignment->driver->user)
+                    {{ $assignment->driver->user->full_name }}
+                @else
+                    No active driver assigned
+                @endif
             </div>
             <div class="col-md-4">
                 <strong>Route:</strong><br>
-                {{ $assignment->route->name }}
+                {{ $assignment->route->name ?? '—' }}
             </div>
             <div class="col-md-4">
                 <strong>Bus:</strong><br>
-                {{ $assignment->bus->plate_number }}
+                {{ $assignment->bus->plate_number ?? '—' }}
             </div>
         </div>
     </div>

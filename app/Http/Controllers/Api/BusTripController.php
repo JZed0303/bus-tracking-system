@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\BusIncidentReported;
+use App\Events\BusTripStarted;
 use App\Http\Controllers\Controller;
 use App\Models\Checkin;
 use App\Models\TripEmployeeTransfer;
@@ -117,6 +119,17 @@ class BusTripController extends Controller
             'actual_start_time' => now(),
         ]);
 
+        event(new BusTripStarted([
+            'trip_id' => (int) $trip->id,
+            'bus_id' => (int) $bus->id,
+            'company_id' => (int) ($assignment->company_id ?? 0),
+            'plate_number' => $assignment->bus?->plate_number ?? $bus->plate_number,
+            'route' => $assignment->route?->name,
+            'direction' => $trip->direction,
+            'status' => $trip->status,
+            'started_at' => optional($trip->actual_start_time)->toIso8601String(),
+        ]));
+
         return response()->json([
             'success' => true,
             'message' => 'Trip started successfully',
@@ -134,6 +147,7 @@ class BusTripController extends Controller
         // ===== NEW: Mid-trip incident flow =====
         // Supports: maintenance/breakdown/emergency + optional replacement bus transfer.
         $validated = $request->validate([
+            'trip_id' => 'nullable|integer|exists:trips,id',
             'incident_type' => 'required|string|in:maintenance,breakdown,emergency',
             'reason' => 'required|string|max:255',
             'replacement_bus_id' => 'nullable|integer|exists:buses,id',
@@ -144,13 +158,18 @@ class BusTripController extends Controller
 
         $bus = $request->user();
 
-        $trip = Trip::query()
+        $tripQuery = Trip::query()
             ->where('status', 'ongoing')
             ->whereHas('assignment', function ($q) use ($bus) {
                 $q->where('bus_id', $bus->id);
             })
-            ->with('assignment')
-            ->first();
+            ->with('assignment.bus');
+
+        if (!empty($validated['trip_id'])) {
+            $tripQuery->whereKey((int) $validated['trip_id']);
+        }
+
+        $trip = $tripQuery->first();
 
         if (!$trip) {
             return response()->json([
@@ -247,6 +266,7 @@ class BusTripController extends Controller
                 'status' => 'cancelled',
                 'actual_end_time' => now(),
                 'ended_reason' => $validated['incident_type'],
+                'incident_reason' => $reason,
                 'incident_reported_at' => now(),
             ]);
 
@@ -312,7 +332,7 @@ class BusTripController extends Controller
             }
 
             return [
-                'trip' => $trip->fresh(),
+                'trip' => $trip->fresh('assignment.bus'),
                 'replacement_trip' => $replacementTrip,
                 'transferred_count' => $transferredCount,
                 'employee_ids' => $onboardEmployeeIds->values()->all(),
@@ -340,12 +360,42 @@ class BusTripController extends Controller
             tags: 'incident,transfer'
         );
 
+        event(new BusIncidentReported([
+            'trip_id' => (int) $result['trip']->id,
+            'bus_id' => (int) $bus->id,
+            'plate_number' => $result['trip']->assignment?->bus?->plate_number,
+            'company_id' => (int) ($trip->assignment?->company_id ?? 0),
+            'company' => $trip->assignment?->company?->name,
+            'route' => $trip->assignment?->route?->name,
+            'incident_type' => $result['trip']->ended_reason,
+            'reason' => $result['trip']->incident_reason,
+            'reported_at' => optional($result['trip']->incident_reported_at)->toIso8601String(),
+            'status' => $result['trip']->status,
+        ]));
+
         return response()->json([
             'success' => true,
             'message' => 'Incident handled successfully.',
             'data' => [
                 'ended_trip_id' => $result['trip']->id,
                 'ended_reason' => $result['trip']->ended_reason,
+                'incident' => [
+                    'reported_at' => optional($result['trip']->incident_reported_at)->toIso8601String(),
+                    'type' => $result['trip']->ended_reason,
+                    'reason' => $result['trip']->incident_reason,
+                ],
+                'bus' => [
+                    'id' => $bus->id,
+                    'plate_number' => $result['trip']->assignment?->bus?->plate_number,
+                    'status' => $bus->fresh()->status,
+                ],
+                'trip' => [
+                    'id' => $result['trip']->id,
+                    'direction' => $result['trip']->direction,
+                    'status' => $result['trip']->status,
+                    'started_at' => optional($result['trip']->actual_start_time)->toIso8601String(),
+                    'ended_at' => optional($result['trip']->actual_end_time)->toIso8601String(),
+                ],
                 'replacement_trip_id' => $result['replacement_trip']?->id,
                 'transferred_count' => $result['transferred_count'],
             ],

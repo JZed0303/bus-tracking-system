@@ -39,7 +39,8 @@ class ChatController extends Controller
         if ($user->isCompanyAdmin()) {
             $query->where(function ($q) use ($user) {
                 $q->where(function ($q2) use ($user) {
-                    $q2->whereNotNull('company_id')
+                    $q2->where('context_type', 'bus_support')
+                       ->whereNotNull('company_id')
                        ->where('company_id', $user->company_id);
                 })
                 ->orWhereExists(function ($sub) use ($user) {
@@ -244,29 +245,31 @@ class ChatController extends Controller
             return;
         }
 
-        // ✅ Auto-heal company_id for bus_support threads if missing
-        // This prevents "thread has no company_id" for legacy/bug-created threads.
-        $this->ensureThreadCompanyId($thread);
-
-        // company_admin can open any thread under their company
-        if ($user->isCompanyAdmin()) {
-            abort_unless(!is_null($user->company_id), 403, 'company_admin has no company_id');
-
-            // If still null after heal, block with a clear message
-            abort_unless(!is_null($thread->company_id), 403, 'thread has no company_id');
-
-            abort_unless((int) $thread->company_id === (int) $user->company_id, 403, 'company mismatch');
-            return;
-        }
-
-        // otherwise: must be participant
-        $ok = DB::table('chat_participants')
+        $isParticipant = DB::table('chat_participants')
             ->where('thread_id', $thread->id)
             ->where('participant_type', User::class)
             ->where('participant_id', $user->id)
             ->exists();
 
-        abort_unless($ok, 403, 'not a participant');
+        // ✅ Auto-heal company_id for bus_support threads if missing
+        // This prevents "thread has no company_id" for legacy/bug-created threads.
+        $this->ensureThreadCompanyId($thread);
+
+        // company_admin can open company bus_support thread, or any thread where they are a participant.
+        if ($user->isCompanyAdmin()) {
+            abort_unless(!is_null($user->company_id), 403, 'company_admin has no company_id');
+
+            if ($thread->context_type === 'bus_support' && !is_null($thread->company_id)) {
+                abort_unless((int) $thread->company_id === (int) $user->company_id, 403, 'company mismatch');
+                return;
+            }
+
+            abort_unless($isParticipant, 403, 'not a participant');
+            return;
+        }
+
+        // otherwise: must be participant
+        abort_unless($isParticipant, 403, 'not a participant');
     }
 
     private function formatMessage(ChatMessage $m): array

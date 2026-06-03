@@ -44,6 +44,7 @@
 
     {{-- Default template head CSS (bootstrap, icons, etc.) --}}
     @include('layouts.head-css')
+    <link href="{{ URL::asset('build/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css" />
 
     {{-- NOTE:
          `worthy-global-override.css` is now handled by Vite.
@@ -116,6 +117,65 @@
 
 <!-- vendor-scripts (bootstrap.bundle, waves, simplebar, etc.) -->
 @include('layouts.vendor-scripts')
+<script src="{{ URL::asset('build/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Swal === 'undefined') {
+            return;
+        }
+
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3200,
+            timerProgressBar: true,
+        });
+
+        @if(session('success'))
+            toast.fire({
+                icon: 'success',
+                title: @json(session('success')),
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Action Failed',
+                text: @json(session('error')),
+                confirmButtonColor: '#d33',
+            });
+        @endif
+
+        @if(session('warning'))
+            Swal.fire({
+                icon: 'warning',
+                title: 'Please Check',
+                text: @json(session('warning')),
+                confirmButtonColor: '#f59e0b',
+            });
+        @endif
+
+        @if(session('info'))
+            toast.fire({
+                icon: 'info',
+                title: @json(session('info')),
+            });
+        @endif
+
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                html: '<ul style="text-align:left; margin:0; padding-left:1.25rem;">' +
+                    @json(collect($errors->all())->map(fn ($message) => '<li>' . e($message) . '</li>')->implode('')) +
+                    '</ul>',
+                confirmButtonColor: '#d33',
+            });
+        @endif
+    });
+</script>
 
 </body>
 </html>

@@ -38,9 +38,6 @@
                         @case('valid')
                             <span class="badge bg-success">VALID</span>
                             @break
-                        @case('expired')
-                            <span class="badge bg-warning">EXPIRED</span>
-                            @break
                         @case('revoked')
                             <span class="badge bg-danger">REVOKED</span>
                             @break

@@ -102,10 +102,14 @@ class UserPermissionController extends Controller
         ->sortBy('order');
 
         $specialPermissions = Permission::whereIn('name', [
-    'view_admin_dashboard',
-    'view_company_dashboard',
-    'view_live_tracking',
-])->orderBy('name')->get();
+            'view_admin_dashboard',
+            'view_company_dashboard',
+            'view_live_tracking',
+            'manage_user_permissions',
+            'manage_role_permissions',
+            'view_users',
+            'manage_users',
+        ])->orderBy('name')->get();
 
         return view('admin.users.permissions', compact(
             'user',

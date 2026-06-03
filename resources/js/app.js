@@ -168,7 +168,8 @@ File: Main Js File
         function initPreloader() {
             $(window).on('load', function () {
                 $('#status').fadeOut();
-                $('#preloader').delay(350).fadeOut('slow');
+                // Keep the preloader brief so dashboard content is visible immediately.
+                $('#preloader').stop(true, true).fadeOut(120);
             });
         }
 
@@ -254,4 +255,3 @@ File: Main Js File
         init();
 
     })(jQuery)
-

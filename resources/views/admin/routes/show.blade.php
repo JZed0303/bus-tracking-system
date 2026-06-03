@@ -11,6 +11,30 @@
         height: 420px;
         border-radius: 6px;
     }
+    .route-map-shell {
+        position: relative;
+    }
+    #route-map.route-loading {
+        filter: blur(2px);
+        transition: filter 0.15s ease;
+    }
+    .route-map-loader {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.45);
+        backdrop-filter: saturate(1.1);
+        border-radius: 6px;
+        z-index: 900;
+        font-size: 13px;
+        font-weight: 600;
+        color: #495057;
+    }
+    .route-map-shell.loading .route-map-loader {
+        display: flex;
+    }
 
     .stop-badge {
         background: #ffc107;
@@ -92,7 +116,12 @@
             </small>
         </div>
         <div class="card-body p-0">
-            <div id="route-map"></div>
+            {{-- Routing provider/limit errors are shown here for operators. --}}
+            <div id="route-map-alert" class="alert alert-warning m-2 py-2 px-3 d-none"></div>
+            <div class="route-map-shell" id="route-map-shell">
+                <div id="route-map"></div>
+                <div class="route-map-loader" id="route-map-loader">Loading route...</div>
+            </div>
         </div>
     </div>
 
@@ -126,6 +155,64 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const directionsEndpoint = @json(route('admin.api.routes.directions'));
+
+    function showRouteAlert(message, type = 'warning') {
+        const alertEl = document.getElementById('route-map-alert');
+        if (!alertEl) return;
+        alertEl.classList.remove('d-none', 'alert-warning', 'alert-danger', 'alert-info');
+        alertEl.classList.add(`alert-${type}`);
+        alertEl.textContent = message;
+    }
+
+    function hideRouteAlert() {
+        const alertEl = document.getElementById('route-map-alert');
+        if (!alertEl) return;
+        alertEl.classList.add('d-none');
+        alertEl.textContent = '';
+    }
+
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+
+    function isRoutingContextActive(context) {
+        // Ignore stale async callbacks after the control/map was already removed.
+        return !!(context && context._map);
+    }
+
+    function setRouteLoading(loading, text = 'Loading route...') {
+        const shell = document.getElementById('route-map-shell');
+        const mapEl = document.getElementById('route-map');
+        const loader = document.getElementById('route-map-loader');
+        if (!shell || !mapEl || !loader) return;
+        loader.textContent = text;
+        shell.classList.toggle('loading', loading);
+        mapEl.classList.toggle('route-loading', loading);
+    }
+
+    function computeWaypointIndices(waypoints, geometry) {
+        // LRM expects one index per waypoint; using only [start,end] breaks multi-stop routes.
+        let minGeometryIndex = 0;
+        return waypoints.map((wp) => {
+            let bestIndex = 0;
+            let bestScore = Number.POSITIVE_INFINITY;
+
+            for (let i = minGeometryIndex; i < geometry.length; i += 1) {
+                const [lng, lat] = geometry[i];
+                const dLat = lat - wp.latLng.lat;
+                const dLng = lng - wp.latLng.lng;
+                const score = (dLat * dLat) + (dLng * dLng);
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestIndex = i;
+                }
+            }
+
+            minGeometryIndex = bestIndex;
+            return bestIndex;
+        });
+    }
 
     const map = L.map('route-map', {
         zoomControl: true,
@@ -218,6 +305,62 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* ================= ROUTE LINE ================= */
     if (points.length > 1) {
+        const secureOrsRouter = {
+            route(waypoints, callback, context) {
+                setRouteLoading(true);
+                fetch(directionsEndpoint, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        coordinates: waypoints.map((wp) => [wp.latLng.lng, wp.latLng.lat]),
+                    }),
+                })
+                .then(async (res) => {
+                    const body = await res.json().catch(() => ({}));
+                    if (!res.ok || body.status !== 'success') {
+                        const errCode = body.error_code || `ORS_PROXY_HTTP_${res.status}`;
+                        const providerStatus = body.provider_status ? ` (${body.provider_status})` : '';
+                        const providerError = body.provider_error ? ` - ${body.provider_error}` : '';
+                        throw new Error(`${errCode}${providerStatus}${providerError}`);
+                    }
+
+                    const geometry = body.data?.geometry || [];
+                    if (!Array.isArray(geometry) || geometry.length < 2) {
+                        throw new Error('ORS_EMPTY_ROUTE');
+                    }
+
+                    hideRouteAlert();
+                    setRouteLoading(false);
+                    if (isRoutingContextActive(context)) {
+                        callback.call(context, null, [{
+                            name: 'OpenRouteService',
+                            coordinates: geometry.map(([lng, lat]) => L.latLng(lat, lng)),
+                            instructions: [],
+                            summary: {
+                                totalDistance: body.data?.distance_meters || 0,
+                                totalTime: body.data?.duration_seconds || 0,
+                            },
+                            inputWaypoints: waypoints,
+                            waypoints: waypoints.map((wp) => ({ latLng: wp.latLng })),
+                            waypointIndices: computeWaypointIndices(waypoints, geometry),
+                        }]);
+                    }
+                })
+                .catch((err) => {
+                    setRouteLoading(false);
+                    showRouteAlert(`Routing failed: ${err?.message || 'ORS proxy error'}`, 'danger');
+                    if (isRoutingContextActive(context)) {
+                        callback.call(context, err);
+                    }
+                });
+            }
+        };
+
         L.Routing.control({
             waypoints: points,
             addWaypoints: false,
@@ -228,10 +371,14 @@ document.addEventListener('DOMContentLoaded', function () {
             lineOptions: {
                 styles: [{ color: '#0d6efd', weight: 4, opacity: 0.85 }]
             },
-            router: L.Routing.osrmv1({
-                serviceUrl: 'https://router.project-osrm.org/route/v1'
-            })
-        }).addTo(map).getContainer().style.display = 'none';
+            // Unified with create/edit: server-side ORS first, OSRM fallback if needed.
+            router: secureOrsRouter
+        })
+        .on('routingerror', function () {
+            setRouteLoading(false);
+            showRouteAlert('Unable to render route. Please try again later.', 'danger');
+        })
+        .addTo(map).getContainer().style.display = 'none';
     }
 
     /* ================= AUTO FIT ================= */

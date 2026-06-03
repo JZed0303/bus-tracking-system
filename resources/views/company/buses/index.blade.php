@@ -91,10 +91,17 @@
 
                         <td>
                             @if($activeAssignment)
-                                <strong>{{ $activeAssignment->driver->user->full_name }}</strong><br>
-                                <small class="text-muted">
-                                    {{ $activeAssignment->route->name }}
-                                </small>
+                                @if($activeAssignment->driver && $activeAssignment->driver->user)
+                                    <strong>{{ $activeAssignment->driver->user->full_name }}</strong><br>
+                                    <small class="text-muted">
+                                        {{ $activeAssignment->route->name ?? 'No route assigned' }}
+                                    </small>
+                                @else
+                                    <span class="text-muted">No driver assigned</span><br>
+                                    <small class="text-muted">
+                                        {{ $activeAssignment->route->name ?? 'No route assigned' }}
+                                    </small>
+                                @endif
                             @else
                                 <span class="text-muted">Unassigned</span>
                             @endif
@@ -184,6 +191,12 @@ $(function () {
 
     let locationMap = null;
     let locationMarker = null;
+    const busLocationIcon = L.icon({
+        iconUrl: '/images/marker/bus icon.png',
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+        popupAnchor: [0, -20],
+    });
 
     function ensureLocationMap() {
         if (locationMap) return locationMap;
@@ -232,8 +245,26 @@ $(function () {
             locationMarker.remove();
         }
 
-        locationMarker = L.marker([lat, lng]).addTo(map);
-        locationMarker.bindPopup(`<strong>${plate || 'Bus'}</strong><br>${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
+        locationMarker = L.marker([lat, lng], { icon: busLocationIcon }).addTo(map);
+        locationMarker.bindPopup(`
+            <div class="bus-location-popup">
+                <div class="bus-location-popup__eyebrow">
+                    <i class="mdi mdi-map-marker-radius"></i>
+                    Live GPS
+                </div>
+                <h6 class="bus-location-popup__title">${plate || 'Bus'}</h6>
+                <div class="bus-location-popup__label">Last Bus Location</div>
+                <div class="bus-location-popup__coords">
+                    ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                </div>
+            </div>
+        `, {
+            className: 'bus-location-popup-wrap',
+            closeButton: false,
+            autoClose: false,
+            closeOnClick: false,
+            offset: [0, -16],
+        }).openPopup();
     }
 
     // ============================
@@ -281,10 +312,16 @@ $(function () {
                 const activeAssignment = bus.assignments?.find(a => a.status === 'active');
 
                 if (activeAssignment) {
-                    $busAssignment.html(
-                        `<strong>${activeAssignment.driver.user.full_name}</strong><br>
-                         <small class="text-muted">${activeAssignment.route.name}</small>`
-                    );
+                    const hasDriver = !!(activeAssignment.driver && activeAssignment.driver.user);
+                    const driverName = hasDriver
+                        ? activeAssignment.driver.user.full_name
+                        : 'No driver assigned';
+                    const routeName = activeAssignment.route?.name ?? 'No route assigned';
+
+                    $busAssignment.html(`
+                        <strong>${driverName}</strong><br>
+                        <small class="text-muted">${routeName}</small>
+                    `);
                 } else {
                     $busAssignment.html('<span class="text-muted">Unassigned</span>');
                 }

@@ -19,6 +19,9 @@
 @endsection
 
 @section('content')
+@php
+    $isArchive = $isArchive ?? false;
+@endphp
 <div class="container-fluid">
 
     <!-- PAGE HEADER -->
@@ -30,11 +33,17 @@
             </p>
         </div>
         <div class="col text-end">
-            <button class="btn btn-primary"
-                    data-bs-toggle="modal"
-                    data-bs-target="#createBusModal">
-                <i class="mdi mdi-plus"></i> Add Bus
-            </button>
+            <a href="{{ $isArchive ? route('admin.buses.index') : route('admin.buses.archive') }}"
+               class="btn btn-light me-1">
+                <i class="mdi mdi-archive-outline"></i> {{ $isArchive ? 'Back to Active' : 'Archive' }}
+            </a>
+            @unless($isArchive)
+                <button class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#createBusModal">
+                    <i class="mdi mdi-plus"></i> Add Bus
+                </button>
+            @endunless
         </div>
     </div>
 
@@ -120,18 +129,49 @@
                                     <i class="mdi mdi-map-marker-radius-outline"></i>
                                 </button>
 
-                                <!-- EDIT -->
-                                <button class="btn btn-edit-bus"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editBusModal{{ $bus->id }}"
-                                        title="Edit Bus">
-                                    <i class="mdi mdi-pencil-outline"></i>
-                                </button>
+                                @if($isArchive)
+                                    <form method="POST"
+                                          action="{{ route('admin.buses.restore', $bus->id) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Restore this bus?')">
+                                        @csrf
+                                        <button type="submit"
+                                                class="btn"
+                                                data-bs-toggle="tooltip"
+                                                title="Restore Bus">
+                                            <i class="mdi mdi-restore"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <!-- EDIT -->
+                                    <button class="btn btn-edit-bus"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editBusModal{{ $bus->id }}"
+                                            title="Edit Bus">
+                                        <i class="mdi mdi-pencil-outline"></i>
+                                    </button>
+
+                                    <form method="POST"
+                                          action="{{ route('admin.buses.destroy', $bus) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Delete this bus?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="btn"
+                                                data-bs-toggle="tooltip"
+                                                title="Delete Bus">
+                                            <i class="mdi mdi-trash-can-outline"></i>
+                                        </button>
+                                    </form>
+                                @endif
 
                             </div>
 
                             {{-- Edit Modal --}}
-                            @include('admin.buses.modal.edit')
+                            @unless($isArchive)
+                                @include('admin.buses.modal.edit')
+                            @endunless
                         </td>
                     </tr>
                 @endforeach
@@ -145,7 +185,9 @@
 </div>
 
 {{-- Create + View Modals --}}
-@include('admin.buses.modal.create')
+@unless($isArchive)
+    @include('admin.buses.modal.create')
+@endunless
 @include('admin.buses.modal.show')
 @include('admin.buses.modal.location')
 
@@ -178,6 +220,12 @@ $(function () {
 
     let locationMap = null;
     let locationMarker = null;
+    const busLocationIcon = L.icon({
+        iconUrl: '/images/marker/bus icon.png',
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+        popupAnchor: [0, -20],
+    });
 
     function ensureLocationMap() {
         if (locationMap) return locationMap;
@@ -226,8 +274,26 @@ $(function () {
             locationMarker.remove();
         }
 
-        locationMarker = L.marker([lat, lng]).addTo(map);
-        locationMarker.bindPopup(`<strong>${plate || 'Bus'}</strong><br>${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
+        locationMarker = L.marker([lat, lng], { icon: busLocationIcon }).addTo(map);
+        locationMarker.bindPopup(`
+            <div class="bus-location-popup">
+                <div class="bus-location-popup__eyebrow">
+                    <i class="mdi mdi-map-marker-radius"></i>
+                    Live GPS
+                </div>
+                <h6 class="bus-location-popup__title">${plate || 'Bus'}</h6>
+                <div class="bus-location-popup__label">Last Bus Location</div>
+                <div class="bus-location-popup__coords">
+                    ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                </div>
+            </div>
+        `, {
+            className: 'bus-location-popup-wrap',
+            closeButton: false,
+            autoClose: false,
+            closeOnClick: false,
+            offset: [0, -16],
+        }).openPopup();
     }
 
     // ============================

@@ -11,24 +11,31 @@ const csrfToken = document
 // OPTIONAL debug (remove later)
 // Pusher.logToConsole = true;
 
-window.Echo = new Echo({
-  broadcaster: 'pusher',
-  key: import.meta.env.VITE_PUSHER_APP_KEY,
-  cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
-  forceTLS: true,
+const broadcastDriver = import.meta.env.VITE_BROADCAST_DRIVER ?? 'null';
+const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY;
 
-  // IMPORTANT for private channels in Laravel (web session)
-  authEndpoint: '/broadcasting/auth',
-  auth: {
-    headers: {
-      'X-CSRF-TOKEN': csrfToken,
-      'X-Requested-With': 'XMLHttpRequest',
-      Accept: 'application/json',
+if (broadcastDriver === 'pusher' && pusherKey) {
+  window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: pusherKey,
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+    forceTLS: true,
+
+    // IMPORTANT for private channels in Laravel (web session)
+    authEndpoint: '/broadcasting/auth',
+    auth: {
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        Accept: 'application/json',
+      },
     },
-  },
-});
+  });
+} else {
+  window.Echo = null;
+}
 
-console.log('[bootstrap] Echo initialized:', !!window.Echo);
+console.log('[bootstrap] Echo initialized:', !!window.Echo, 'driver:', broadcastDriver);
 
 // 🔓 Unlock chat sound after first user interaction
 document.addEventListener('DOMContentLoaded', () => {

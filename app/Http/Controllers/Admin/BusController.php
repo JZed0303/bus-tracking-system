@@ -27,7 +27,26 @@ class BusController extends Controller
             ->latest()
             ->get();
 
-        return view('admin.buses.index', compact('buses'));
+        return view('admin.buses.index', [
+            'buses' => $buses,
+            'isArchive' => false,
+        ]);
+    }
+
+    public function archive(): View
+    {
+        $buses = Bus::onlyTrashed()
+            ->with([
+                'assignments.driver.user',
+                'assignments.route',
+            ])
+            ->orderByDesc('deleted_at')
+            ->get();
+
+        return view('admin.buses.index', [
+            'buses' => $buses,
+            'isArchive' => true,
+        ]);
     }
 
     /**
@@ -177,6 +196,25 @@ public function update(Request $request, Bus $bus): RedirectResponse
     return redirect()
         ->route('admin.buses.index')
         ->with('success', 'Bus updated successfully.');
+}
+
+public function destroy(Bus $bus): RedirectResponse
+{
+    $bus->delete();
+
+    return redirect()
+        ->route('admin.buses.index')
+        ->with('success', 'Bus deleted successfully.');
+}
+
+public function restore(int $id): RedirectResponse
+{
+    $bus = Bus::onlyTrashed()->findOrFail($id);
+    $bus->restore();
+
+    return redirect()
+        ->route('admin.buses.archive')
+        ->with('success', 'Bus restored successfully.');
 }
 
 }

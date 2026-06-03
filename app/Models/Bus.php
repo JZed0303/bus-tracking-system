@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -18,7 +19,7 @@ use App\Models\ChatThread;
 
 class Bus extends Authenticatable implements Auditable
 {
-    use HasApiTokens, HasFactory, AuditableTrait;
+    use HasApiTokens, HasFactory, SoftDeletes, AuditableTrait;
 
     protected $fillable = [
         'plate_number',

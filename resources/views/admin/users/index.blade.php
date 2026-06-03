@@ -18,6 +18,9 @@ Users
 @endsection
 
 @section('content')
+@php
+    $isArchive = $isArchive ?? false;
+@endphp
 
 <style>
     .table td {
@@ -94,7 +97,7 @@ Users
 
                 <div class="col-12 text-end">
                     <button class="btn btn-primary">Apply Filters</button>
-                    <a href="{{ route('admin.users.index') }}" class="btn btn-light">Reset</a>
+                    <a href="{{ $isArchive ? route('admin.users.archive') : route('admin.users.index') }}" class="btn btn-light">Reset</a>
                 </div>
 
             </form>
@@ -117,10 +120,18 @@ Users
         </div>
         <div class="col text-end">
             @can('manage_users')
-                <a href="{{ route('admin.users.create') }}"
-                   class="btn btn-primary">
-                    <i class="mdi mdi-account-plus"></i> Add User
+                <a href="{{ $isArchive ? route('admin.users.index') : route('admin.users.archive') }}"
+                   class="btn btn-light me-1">
+                    <i class="mdi mdi-archive-outline"></i> {{ $isArchive ? 'Back to Active' : 'Archive' }}
                 </a>
+            @endcan
+            @can('manage_users')
+                @unless($isArchive)
+                    <a href="{{ route('admin.users.create') }}"
+                       class="btn btn-primary">
+                        <i class="mdi mdi-account-plus"></i> Add User
+                    </a>
+                @endunless
             @endcan
         </div>
     </div>
@@ -196,25 +207,39 @@ Users
                     @can('manage_users')
                         <div class="btn-group btn-group-sm user-actions">
 
-                            <a href="{{ route('admin.users.edit', $user) }}"
-                               class="btn"
-                               data-bs-toggle="tooltip"
-                               title="Edit User">
-                                <i class="mdi mdi-pencil-outline"></i>
-                            </a>
+                            @if($isArchive)
+                                <form method="POST"
+                                      action="{{ route('admin.users.restore', $user->id) }}"
+                                      onsubmit="return confirm('Restore this user?')">
+                                    @csrf
+                                    <button type="submit"
+                                            class="btn"
+                                            data-bs-toggle="tooltip"
+                                            title="Restore User">
+                                        <i class="mdi mdi-restore"></i>
+                                    </button>
+                                </form>
+                            @else
+                                <a href="{{ route('admin.users.edit', $user) }}"
+                                   class="btn"
+                                   data-bs-toggle="tooltip"
+                                   title="Edit User">
+                                    <i class="mdi mdi-pencil-outline"></i>
+                                </a>
 
-                            <form method="POST"
-                                  action="{{ route('admin.users.destroy', $user) }}"
-                                  onsubmit="return confirm('Deactivate this user?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        class="btn"
-                                        data-bs-toggle="tooltip"
-                                        title="Disable User">
-                                    <i class="mdi mdi-account-off-outline"></i>
-                                </button>
-                            </form>
+                                <form method="POST"
+                                      action="{{ route('admin.users.destroy', $user) }}"
+                                      onsubmit="return confirm('Delete this user?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="btn"
+                                            data-bs-toggle="tooltip"
+                                            title="Delete User">
+                                        <i class="mdi mdi-trash-can-outline"></i>
+                                    </button>
+                                </form>
+                            @endif
 
                         </div>
                     @endcan
